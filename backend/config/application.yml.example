@@ -1,0 +1,17 @@
+# 本机私有配置模板。
+# 用法：在本目录复制一份并改名为 application.yml，再把下面两处“填写”换成自己的值。
+# application.yml 含密码和密钥，已被 .gitignore 排除，不会提交；不要把它发到群里。
+spring:
+  datasource:
+    username: lostfound_app
+    password: '填写你创建 lostfound_app 账号时设置的密码'
+app:
+  storage:
+    # 相对 backend 目录，即仓库根目录下的 runtime/uploads；一般不用改
+    upload-dir: ../runtime/uploads
+  verification:
+    # 随机密钥，至少 32 位；生成方法见仓库 README
+    hmac-key: '填写随机生成的密钥'
+  mail:
+    mode: dev-file
+    dev-mail-dir: ../runtime/dev-mail

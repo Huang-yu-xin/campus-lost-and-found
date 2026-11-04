@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "启动后端",
+      "request": "launch",
+      "mainClass": "com.campus.lostfound.CampusLostFoundApplication",
+      "projectName": "lost-found-backend",
+      // 从 backend 目录启动，才能读到 backend/config/application.yml 里的数据库配置
+      "cwd": "${workspaceFolder}/backend",
+      "vmArgs": "-Duser.timezone=UTC"
+    }
+  ]
+}
