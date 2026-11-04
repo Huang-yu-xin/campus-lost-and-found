@@ -11,18 +11,19 @@
 - [接口文档](docs/接口文档.md) 与 [OpenAPI](docs/openapi.yaml)
 - [数据库设计](docs/数据库设计.md) 与 [迁移说明](database/README.md)
 
-当前为开发准备阶段：接口与数据库设计已形成，数据库脚本在隔离实例验证过；backend 基础框架已建立（统一响应与错误、requestId、Session + CSRF、配置校验），尚无业务接口；前端尚未初始化。运行命令、环境配置和完成标准见手册，不能将本目录的文档校验结果当成已运行的应用。
+当前为开发准备阶段：接口与数据库设计已形成，数据库脚本在隔离实例验证过；backend 基础框架已建立（统一响应与错误、requestId、Session + CSRF、配置校验），尚无业务接口；frontend 基础框架已建立（统一请求与 CSRF、错误提示、登录状态、路由守卫、学生端/管理端布局），尚无业务页面。运行命令、环境配置和完成标准见手册，不能将本目录的文档校验结果当成已运行的应用。
 
 ## 拉代码后在自己电脑上跑起来
 
-每个人用自己电脑上的数据库，按下面 5 步操作一次即可。命令以 Windows PowerShell 为例。
+每个人用自己电脑上的数据库，按下面 6 步操作一次即可。命令以 Windows PowerShell 为例。
 
 ### 1. 准备软件
 
 - JDK 21（不能用 17；电脑默认是别的版本也没关系，见第 4 步）
 - MySQL 8.0
+- Node.js 24（24.12 以上；或 22.18 以上），自带 npm
 - Git
-- 编辑器二选一：IntelliJ IDEA，或 VS Code + “Extension Pack for Java”扩展。VS Code 里不要同时装 Oracle 的 Java 扩展，会和这套冲突
+- 编辑器二选一：IntelliJ IDEA，或 VS Code + “Extension Pack for Java”和“Vue - Official”两个扩展。VS Code 里不要同时装 Oracle 的 Java 扩展，会和这套冲突
 
 ### 2. 下载代码
 
@@ -95,6 +96,29 @@ cd backend
 
 启动后在浏览器打开 http://localhost:8080/api/v1/auth/csrf ，看到 `"code":"OK"` 就成功了。接口文档页面在 http://localhost:8080/swagger-ui.html 。
 
+### 6. 启动前端
+
+后端保持运行，另开一个终端：
+
+```powershell
+cd frontend
+npm.cmd ci
+npm.cmd run dev
+```
+
+`npm ci` 按 `package-lock.json` 安装和大家完全一样的依赖版本，第一次需要几分钟；以后只有 package-lock.json 变了才需要再运行。不要用 `npm install` 随手升级依赖，要加新依赖先在群里说。
+
+浏览器打开 http://localhost:5173 （固定用 localhost，不要换成 127.0.0.1，否则登录状态对不上）。首页显示“后端连接正常”就说明前后端都通了。
+
+提交前端代码前运行一遍检查，全部通过再提交：
+
+```powershell
+npm.cmd run type-check
+npm.cmd run lint
+npm.cmd run test:unit -- --run
+npm.cmd run build
+```
+
 常见问题：
 
 | 现象 | 原因 |
@@ -102,5 +126,6 @@ cd backend
 | 启动报 `Could not bind properties to 'AppProperties'` | `backend/config/application.yml` 不存在，或者 hmac-key 不足 32 位；也可能不是从 backend 目录启动的 |
 | `Access denied for user 'lostfound_app'` | application.yml 里的密码和第 3 步设的不一致 |
 | `Unknown database 'campus_lost_found'` | 第 3 步没做完 |
-| 提示 8080 端口被占用 | 后端已经在运行了，先停掉旧的 |
+| 提示 8080 或 5173 端口被占用 | 后端或前端已经在运行了，先停掉旧的 |
+| 前端首页显示“后端连接失败” | 后端没有启动，或启动失败；先看后端终端的报错 |
 | 编译报 `Fatal error compiling`，后面跟“不支持发行版本 21”（中文系统上可能是乱码） | 当前终端用的不是 JDK 21 |

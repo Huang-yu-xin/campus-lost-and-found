@@ -1,0 +1,49 @@
+import { computed, ref } from 'vue'
+import { defineStore } from 'pinia'
+
+import { getMe } from '@/api/auth'
+import { ApiError } from '@/api/http'
+import type { Me } from '@/types/domain'
+
+/** 当前登录用户。Pinia 只存这类少量共享状态，列表和表单数据放在各自页面里。 */
+export const useAuthStore = defineStore('auth', () => {
+  const me = ref<Me | null>(null)
+  const loaded = ref(false)
+  let loading: Promise<void> | null = null
+
+  const isLoggedIn = computed(() => me.value !== null)
+  const isAdmin = computed(() => me.value?.role === 'ADMIN')
+
+  /** 向后端确认登录状态；未登录（401）是正常结果，不算错误。 */
+  function reload(): Promise<void> {
+    loading ??= getMe()
+      .then((user) => {
+        me.value = user
+      })
+      .catch((error: unknown) => {
+        me.value = null
+        if (!(error instanceof ApiError && error.status === 401)) {
+          throw error
+        }
+      })
+      .finally(() => {
+        loaded.value = true
+        loading = null
+      })
+    return loading
+  }
+
+  /** 首次进入页面时加载一次；已加载过则直接返回。 */
+  async function ensureLoaded(): Promise<void> {
+    if (!loaded.value) {
+      await reload()
+    }
+  }
+
+  /** 退出或会话失效时清空，避免页面继续显示私有数据。 */
+  function clear(): void {
+    me.value = null
+  }
+
+  return { me, loaded, isLoggedIn, isAdmin, reload, ensureLoaded, clear }
+})
