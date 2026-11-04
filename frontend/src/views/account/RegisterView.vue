@@ -5,6 +5,7 @@ import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 
 import { register, sendRegistrationCode } from '@/api/auth'
 import { describeError } from '@/api/feedback'
+import { textLength } from '@/utils/text'
 
 // FR-01 注册：学号、姓名、校园卡号须与虚拟名册一致；邮箱验证码为模拟发送。注册成功不自动登录
 
@@ -63,9 +64,8 @@ const rules: FormRules<typeof form> = {
   ],
   nickname: [
     {
-      // 与后端一致：去首尾空白后按字符（码点）计数，一个 emoji 算 1 个字
       validator: (_rule, value: string, callback) =>
-        [...value.trim()].length <= 30 ? callback() : callback(new Error('昵称最多 30 个字符')),
+        textLength(value) <= 30 ? callback() : callback(new Error('昵称最多 30 个字符')),
       trigger: 'blur',
     },
   ],

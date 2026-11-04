@@ -27,6 +27,12 @@ const router = createRouter({
           name: 'register',
           component: () => import('@/views/account/RegisterView.vue'),
         },
+        {
+          path: 'me/profile',
+          name: 'profile',
+          component: () => import('@/views/personal/ProfileView.vue'),
+          meta: { requiresAuth: true },
+        },
       ],
     },
     {

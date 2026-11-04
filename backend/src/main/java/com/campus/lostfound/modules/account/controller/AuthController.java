@@ -7,6 +7,7 @@ import com.campus.lostfound.modules.account.dto.Me;
 import com.campus.lostfound.modules.account.dto.RegisterRequest;
 import com.campus.lostfound.modules.account.dto.SendCodeRequest;
 import com.campus.lostfound.modules.account.service.AuthService;
+import com.campus.lostfound.modules.account.service.CodeSendLimiter;
 import com.campus.lostfound.modules.account.service.EmailAddresses;
 import com.campus.lostfound.modules.account.service.RegistrationService;
 import com.campus.lostfound.modules.account.service.VerificationCodeService;
@@ -34,17 +35,21 @@ public class AuthController {
     private final AuthService authService;
     private final VerificationCodeService verificationCodeService;
     private final RegistrationService registrationService;
+    private final CodeSendLimiter codeSendLimiter;
 
     public AuthController(AuthService authService, VerificationCodeService verificationCodeService,
-            RegistrationService registrationService) {
+            RegistrationService registrationService, CodeSendLimiter codeSendLimiter) {
         this.authService = authService;
         this.verificationCodeService = verificationCodeService;
         this.registrationService = registrationService;
+        this.codeSendLimiter = codeSendLimiter;
     }
 
     /** 发送注册验证码。邮箱是否已注册在注册时才判断，这里不暴露。 */
     @PostMapping("/email-codes")
-    public ApiResponse<CodeSentData> sendRegistrationCode(@Valid @RequestBody SendCodeRequest request) {
+    public ApiResponse<CodeSentData> sendRegistrationCode(@Valid @RequestBody SendCodeRequest request,
+            HttpServletRequest httpRequest) {
+        codeSendLimiter.acquire(httpRequest.getRemoteAddr());
         return ApiResponse.ok(verificationCodeService.send(VerificationPurpose.REGISTER, null,
                 EmailAddresses.normalize(request.email())));
     }

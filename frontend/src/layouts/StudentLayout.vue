@@ -28,7 +28,9 @@ async function logout() {
         </nav>
         <div class="user-area">
           <template v-if="auth.isLoggedIn">
-            <span class="nickname">{{ auth.me?.nickname }}</span>
+            <RouterLink :to="{ name: 'profile' }" class="nickname">{{
+              auth.me?.nickname
+            }}</RouterLink>
             <RouterLink v-if="auth.isAdmin" to="/admin">管理后台</RouterLink>
             <el-button link @click="logout">退出</el-button>
           </template>

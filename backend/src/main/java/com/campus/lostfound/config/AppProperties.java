@@ -74,7 +74,10 @@ public record AppProperties(
             @DefaultValue("k1") @NotBlank @Size(max = 32) String keyId,
             @DefaultValue("5m") @NotNull Duration codeTtl,
             @DefaultValue("60s") @NotNull Duration resendInterval,
-            @DefaultValue("5") @Min(1) int maxFailedAttempts) {
+            @DefaultValue("5") @Min(1) int maxFailedAttempts,
+            // 同一来源（IP）在时间窗内最多发送的验证码数量
+            @DefaultValue("30") @Min(1) int maxSendsPerSource,
+            @DefaultValue("1h") @NotNull Duration sourceWindow) {
     }
 
     public record Mail(@NotNull MailMode mode, String devMailDir) {

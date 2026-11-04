@@ -58,10 +58,15 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /** 资料修改成功后用接口返回的最新资料（含新 version）替换。 */
+  function setMe(user: Me): void {
+    me.value = user
+  }
+
   /** 退出或会话失效时清空，避免页面继续显示私有数据。 */
   function clear(): void {
     me.value = null
   }
 
-  return { me, loaded, isLoggedIn, isAdmin, reload, ensureLoaded, login, logout, clear }
+  return { me, loaded, isLoggedIn, isAdmin, reload, ensureLoaded, login, logout, setMe, clear }
 })

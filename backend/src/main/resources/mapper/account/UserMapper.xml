@@ -34,6 +34,28 @@
     UPDATE users SET auth_version = auth_version + 1 WHERE id = #{id}
   </update>
 
+  <select id="findProfileForUpdate" resultType="com.campus.lostfound.modules.account.mapper.ProfileRow"
+          flushCache="true" useCache="false">
+    SELECT id, nickname, email, phone, password_hash, version
+    FROM users WHERE id = #{id}
+    FOR UPDATE
+  </select>
+
+  <update id="updateProfile">
+    UPDATE users SET nickname = #{nickname}, phone = #{phone}, version = version + 1
+    WHERE id = #{id} AND version = #{expectedVersion}
+  </update>
+
+  <update id="updateEmail">
+    UPDATE users SET email = #{email}, version = version + 1
+    WHERE id = #{id} AND version = #{expectedVersion}
+  </update>
+
+  <update id="updatePassword">
+    UPDATE users SET password_hash = #{passwordHash}, auth_version = auth_version + 1
+    WHERE id = #{id}
+  </update>
+
   <insert id="insert" useGeneratedKeys="true" keyProperty="id">
     INSERT INTO users (student_record_id, role, nickname, email, phone, password_hash)
     VALUES (#{studentRecordId}, #{role}, #{nickname}, #{email}, #{phone}, #{passwordHash})
