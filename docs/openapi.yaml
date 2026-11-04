@@ -1,0 +1,4423 @@
+openapi: 3.0.3
+info:
+  title: 校园失物招领系统接口合同
+  version: 0.1.0-draft
+  description: 开发前合同草案，尚无实现或测试通过声明。D-01～D-04 为已确认产品选择，其余 BR 规则为本轮设计建议，待团队评审。路径服务器前缀 /api/v1。
+servers:
+- url: http://localhost:8080/api/v1
+  description: 本地开发
+security:
+- SessionAuth: []
+tags:
+- name: 认证
+- name: 个人中心
+- name: 发布与查找
+- name: 认领
+- name: 线索
+- name: 联系方式
+- name: 管理
+- name: 举报
+paths:
+  /auth/csrf:
+    get:
+      operationId: getCsrf
+      summary: 获取 CSRF 令牌
+      description: 匿名也可调用；必要时建立匿名会话，不产生已登录身份。登录、退出或改密后重新获取令牌。
+      tags:
+      - 认证
+      parameters: []
+      security: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+            Set-Cookie:
+              schema:
+                type: string
+              description: 会话创建、登录轮换或会话注销时由服务端设置 JSESSIONID；HttpOnly、SameSite=Lax，HTTPS 环境加 Secure。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrfDataResponse'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 甲
+      x-requirement-ids:
+      - SUP-01
+      x-rule-ids:
+      - BR-01
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-getCsrf-01
+  /auth/email-codes:
+    post:
+      operationId: sendRegistrationCode
+      summary: 发送注册验证码
+      description: 6 位数字，5 分钟有效，绑定注册用途与邮箱；重发替换旧码，成功注册时原子消费。草案每邮箱与来源组合限制发送频率。演示邮件接收方式见 P-01。
+      tags:
+      - 认证
+      parameters:
+      - $ref: '#/components/parameters/CsrfHeader'
+      security: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeSentDataResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 甲
+      x-requirement-ids:
+      - FR-01
+      x-rule-ids:
+      - BR-02
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-sendRegistrationCode-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendCodeRequest'
+  /auth/register:
+    post:
+      operationId: register
+      summary: 注册并绑定校园身份
+      description: 仅创建学生账号，不自动登录。模拟名册匹配、邮箱验证码和唯一性检查通过后原子创建。拒绝未知 role 字段。手机号可在个人资料补充。
+      tags:
+      - 认证
+      parameters:
+      - $ref: '#/components/parameters/CsrfHeader'
+      security: []
+      responses:
+        '201':
+          description: 成功。创建资源。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 甲
+      x-requirement-ids:
+      - FR-01
+      x-rule-ids:
+      - BR-02
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-register-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+  /auth/login:
+    post:
+      operationId: login
+      summary: 登录
+      description: 成功轮换会话 ID，返回当前用户；邮箱不作为登录账号。学号与卡号跨列冲突必须在建号时排除。登录失败不永久锁号，可临时限流。
+      tags:
+      - 认证
+      parameters:
+      - $ref: '#/components/parameters/CsrfHeader'
+      security: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+            Set-Cookie:
+              schema:
+                type: string
+              description: 会话创建、登录轮换或会话注销时由服务端设置 JSESSIONID；HttpOnly、SameSite=Lax，HTTPS 环境加 Secure。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 甲
+      x-requirement-ids:
+      - FR-02
+      x-rule-ids: []
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-login-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: 退出登录
+      description: 使当前会话失效，清除会话 Cookie；旧会话访问私有接口返回 401。
+      tags:
+      - 认证
+      parameters:
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+            Set-Cookie:
+              schema:
+                type: string
+              description: 会话创建、登录轮换或会话注销时由服务端设置 JSESSIONID；HttpOnly、SameSite=Lax，HTTPS 环境加 Secure。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyDataResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 甲
+      x-requirement-ids:
+      - FR-02
+      x-rule-ids: []
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-logout-01
+  /me:
+    get:
+      operationId: getMe
+      summary: 查询自己的资料
+      description: 不接受 userId 查询参数。
+      tags:
+      - 个人中心
+      parameters: []
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 甲
+      x-requirement-ids:
+      - FR-06
+      x-rule-ids: []
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-getMe-01
+    patch:
+      operationId: updateProfile
+      summary: 修改昵称和手机号
+      description: 学号、姓名、校园卡和角色不可修改；邮箱通过独立验证码流程更改。变更实际联系方式时，在同一事务中撤回该用户对应字段的全部既有授权，防止静默分享新值。
+      tags:
+      - 个人中心
+      parameters:
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 甲
+      x-requirement-ids:
+      - FR-06
+      x-rule-ids:
+      - BR-07
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-updateProfile-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfilePatchRequest'
+  /me/email-codes:
+    post:
+      operationId: sendChangeEmailCode
+      summary: 发送修改邮箱验证码
+      description: 验证码绑定当前用户、新邮箱和修改邮箱用途，不能用于注册。
+      tags:
+      - 个人中心
+      parameters:
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeSentDataResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 甲
+      x-requirement-ids:
+      - FR-06
+      x-rule-ids: []
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-sendChangeEmailCode-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendCodeRequest'
+  /me/email:
+    put:
+      operationId: changeEmail
+      summary: 确认修改邮箱
+      description: 检查唯一性与验证码后更新；撤回该用户所有 emailVisible 授权，记录版本变化。
+      tags:
+      - 个人中心
+      parameters:
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 甲
+      x-requirement-ids:
+      - FR-06
+      x-rule-ids:
+      - BR-07
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-changeEmail-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeEmailRequest'
+  /me/password:
+    put:
+      operationId: changePassword
+      summary: 修改密码
+      description: 原密码验证通过后修改，旧密码不可再登录；草案使该用户全部登录会话失效，修改者也须重新登录。
+      tags:
+      - 个人中心
+      parameters:
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+            Set-Cookie:
+              schema:
+                type: string
+              description: 会话创建、登录轮换或会话注销时由服务端设置 JSESSIONID；HttpOnly、SameSite=Lax，HTTPS 环境加 Secure。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyDataResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 甲
+      x-requirement-ids:
+      - FR-03
+      x-rule-ids: []
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-changePassword-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+  /me/items:
+    get:
+      operationId: listMyItems
+      summary: 查询我的发布
+      description: 包含待审核、退回、下架和归档记录；createdAt、id 降序，只返回当前用户的数据。
+      tags:
+      - 个人中心
+      parameters:
+      - &id001
+        name: page
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: integer
+          description: ''
+          minimum: 1
+          default: 1
+      - &id002
+        name: pageSize
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: integer
+          description: ''
+          minimum: 1
+          maximum: 50
+          default: 10
+      - name: status
+        in: query
+        required: false
+        description: 查询条件。
+        schema:
+          $ref: '#/components/schemas/ItemStatus'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemRecordPageResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 甲
+      x-requirement-ids:
+      - FR-04
+      x-rule-ids: []
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-listMyItems-01
+  /me/items/{itemId}:
+    get:
+      operationId: getMyItem
+      summary: 查询我的发布详情
+      description: 归属不匹配统一 404；用于待审核或归档后的个人管理。
+      tags:
+      - 个人中心
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemRecordResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 甲
+      x-requirement-ids:
+      - FR-04
+      x-rule-ids: []
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-getMyItem-01
+  /me/claims:
+    get:
+      operationId: listMyClaims
+      summary: 查询我提交的认领
+      description: 只查询 applicant 为当前用户；createdAt、id 降序。
+      tags:
+      - 个人中心
+      parameters:
+      - *id001
+      - *id002
+      - name: status
+        in: query
+        required: false
+        description: 查询条件。
+        schema:
+          $ref: '#/components/schemas/ClaimStatus'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimPageResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 甲
+      x-requirement-ids:
+      - FR-05
+      x-rule-ids: []
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-listMyClaims-01
+  /me/received-claims:
+    get:
+      operationId: listReceivedClaims
+      summary: 查询我收到的认领
+      description: 只查询属于当前发布人的物品申请；过滤 itemId 不得扩大归属范围。
+      tags:
+      - 个人中心
+      parameters:
+      - *id001
+      - *id002
+      - name: itemId
+        in: query
+        required: false
+        description: 正整数 ID，以字符串传输，不在前端转为 Number。
+        schema: &id003
+          type: string
+          description: 正整数 ID，以字符串传输，不在前端转为 Number。
+          pattern: ^[1-9][0-9]*$
+          example: '1001'
+      - name: status
+        in: query
+        required: false
+        description: 查询条件。
+        schema:
+          $ref: '#/components/schemas/ClaimStatus'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimPageResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 甲
+      x-requirement-ids:
+      - FR-15
+      - FR-28
+      x-rule-ids: []
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-listReceivedClaims-01
+  /me/clues:
+    get:
+      operationId: listMyClues
+      summary: 查询我提供的线索
+      description: 只返回自己的线索，createdAt、id 降序。
+      tags:
+      - 个人中心
+      parameters:
+      - *id001
+      - *id002
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CluePageResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 甲
+      x-requirement-ids:
+      - FR-25
+      x-rule-ids: []
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-listMyClues-01
+  /me/received-clues:
+    get:
+      operationId: listReceivedClues
+      summary: 查询我收到的线索
+      description: 只返回自己的寻物信息收到的线索；createdAt、id 降序。
+      tags:
+      - 个人中心
+      parameters:
+      - *id001
+      - *id002
+      - name: itemId
+        in: query
+        required: false
+        description: 正整数 ID，以字符串传输，不在前端转为 Number。
+        schema: *id003
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CluePageResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 甲
+      x-requirement-ids:
+      - FR-25
+      x-rule-ids: []
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-listReceivedClues-01
+  /uploads/images:
+    post:
+      operationId: uploadImage
+      summary: 上传物品图片
+      description: 按文件内容检查 JPG/PNG，不信任扩展名；最大 2097152 字节。产生仅上传者可访问的未绑定图片，发布时最多绑定 3 张。临时文件清理不构成用户删除接口。
+      tags:
+      - 发布与查找
+      parameters:
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '201':
+          description: 成功。创建资源。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 乙
+      x-requirement-ids:
+      - FR-10
+      x-rule-ids:
+      - BR-03
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-uploadImage-01
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UploadImageRequest'
+  /images/{imageId}:
+    get:
+      operationId: getImage
+      summary: 获取图片内容
+      description: 仅绑定 PUBLISHED 物品的图片可匿名读取。其他情况须会话且为上传者、物品所有者、相关申请/线索参与者或有审核职责的管理员；未绑定图片仅上传者可看。无权统一 404，存储目录不直接公开。
+      tags:
+      - 发布与查找
+      parameters:
+      - name: imageId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      security: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 乙
+      x-requirement-ids:
+      - FR-10
+      - FR-14
+      x-rule-ids:
+      - BR-03
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-getImage-01
+  /items:
+    post:
+      operationId: createItem
+      summary: 发布物品信息
+      description: 作者取自当前会话。状态 PENDING_REVIEW，version=1；验证图片归属和唯一绑定、日期及文本。
+      tags:
+      - 发布与查找
+      parameters:
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '201':
+          description: 成功。创建资源。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemRecordResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 乙
+      x-requirement-ids:
+      - FR-07
+      - FR-10
+      x-rule-ids:
+      - BR-03
+      - BR-04
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-createItem-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateItemRequest'
+    get:
+      operationId: listPublicItems
+      summary: 公开列表与搜索
+      description: 只返回 PUBLISHED；固定每页 10 条。所有筛选条件 AND 组合，keyword 匹配标题 OR 描述。publishedAt、id 降序；无结果返回 items=[]、total=0。
+      tags:
+      - 发布与查找
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: integer
+          description: ''
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: integer
+          description: ''
+          enum:
+          - 10
+          default: 10
+      - name: type
+        in: query
+        required: false
+        description: 发布后不允许修改类型。
+        schema: &id009
+          type: string
+          description: 发布后不允许修改类型。
+          enum:
+          - LOST
+          - FOUND
+      - name: category
+        in: query
+        required: false
+        description: ''
+        schema: &id010
+          type: string
+          description: ''
+          enum:
+          - DOCUMENT
+          - ELECTRONICS
+          - DAILY
+          - BOOK
+          - CLOTHING
+          - OTHER
+      - name: location
+        in: query
+        required: false
+        description: 地点包含匹配。
+        schema:
+          type: string
+          description: ''
+          maxLength: 50
+      - name: keyword
+        in: query
+        required: false
+        description: 标题或描述包含匹配；% 与 _ 视为普通字符。
+        schema:
+          type: string
+          description: ''
+          maxLength: 100
+      - name: dateFrom
+        in: query
+        required: false
+        description: 发生日期起点，包含。
+        schema:
+          type: string
+          description: ''
+          format: date
+      - name: dateTo
+        in: query
+        required: false
+        description: 发生日期终点，包含；不得早于 dateFrom。
+        schema:
+          type: string
+          description: ''
+          format: date
+      security: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicItemPageResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 乙
+      x-requirement-ids:
+      - FR-11
+      - FR-12
+      - FR-13
+      x-rule-ids: []
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-listPublicItems-01
+  /items/{itemId}:
+    patch:
+      operationId: editItem
+      summary: 编辑并重新提交审核
+      description: 仅本人；允许 PENDING_REVIEW、RETURNED、PUBLISHED。FOUND 存在任何认领历史、LOST 存在任何线索历史时禁止编辑（草案）。成功重回待审核，公共接口立即不可见；已下架、归档不能编辑。
+      tags:
+      - 发布与查找
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemRecordResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 乙
+      x-requirement-ids:
+      - FR-08
+      x-rule-ids:
+      - BR-04
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-editItem-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditItemRequest'
+    get:
+      operationId: getPublicItem
+      summary: 公开物品详情
+      description: 仅 PUBLISHED 可读，其余即使发布者登录也返回 404，发布者改用 /me/items/{itemId}。无联系方式、凭证或线索内容。
+      tags:
+      - 发布与查找
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      security: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicItemResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 乙
+      x-requirement-ids:
+      - FR-14
+      x-rule-ids: []
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-getPublicItem-01
+  /items/{itemId}/withdraw:
+    post:
+      operationId: withdrawItem
+      summary: 主动下架或关闭寻找
+      description: 本人且非下架/归档。FOUND 处于 CONFIRMED 时禁止主动下架；其余待确认申请原子转 CLOSED。LOST 可关闭，保留线索，停发留言。closureReason=OWNER_WITHDRAWN。
+      tags:
+      - 发布与查找
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemRecordResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 乙
+      x-requirement-ids:
+      - FR-09
+      x-rule-ids:
+      - BR-04
+      - BR-05
+      - BR-06
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-withdrawItem-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+            example:
+              expectedVersion: 1
+  /items/{itemId}/claims:
+    post:
+      operationId: createClaim
+      summary: 提交认领申请
+      description: 仅 PUBLISHED 的 FOUND，不能是发布人，不能已有确认人。同一用户对同一物品最多一个申请（含驳回/关闭历史）。申请成功即允许双方留言。
+      tags:
+      - 认领
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '201':
+          description: 成功。创建资源。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 丙
+      x-requirement-ids:
+      - FR-15
+      x-rule-ids:
+      - BR-05
+      - BR-08
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-createClaim-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimRequest'
+            example:
+              description: 黑色水杯的杯底有一道明显划痕
+  /claims/{claimId}:
+    get:
+      operationId: getClaim
+      summary: 认领私有详情
+      description: 仅申请人和发布人；其他人包括无关联举报上下文的管理员返回 404。含归档物品记录，不返回联系方式。
+      tags:
+      - 认领
+      parameters:
+      - name: claimId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimDetailResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 丙
+      x-requirement-ids:
+      - FR-05
+      - FR-15
+      x-rule-ids: []
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-getClaim-01
+  /claims/{claimId}/confirm:
+    post:
+      operationId: confirmClaim
+      summary: 确认认领人
+      description: 仅发布人，申请 PENDING、物品 PUBLISHED 且未被占用。事务内原子设置 acceptedClaimId、当前申请 CONFIRMED、其他 PENDING 申请 CLOSED/OTHER_ACCEPTED，并递增版本。并发确认只能一个成功。
+      tags:
+      - 认领
+      parameters:
+      - name: claimId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 丙
+      x-requirement-ids:
+      - FR-16
+      x-rule-ids:
+      - BR-05
+      - BR-09
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-confirmClaim-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+            example:
+              expectedVersion: 1
+  /claims/{claimId}/reject:
+    post:
+      operationId: rejectClaim
+      summary: 驳回认领
+      description: 仅发布人，PENDING 转 REJECTED；必须给原因。不能用于取消已确认认领。
+      tags:
+      - 认领
+      parameters:
+      - name: claimId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 丙
+      x-requirement-ids:
+      - FR-17
+      x-rule-ids:
+      - BR-05
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-rejectClaim-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonVersionRequest'
+            example:
+              expectedVersion: 1
+              reason: 物品特征与所描述的情况不一致
+  /claims/{claimId}/complete:
+    post:
+      operationId: completeClaim
+      summary: 确认交接完成
+      description: 仅发布人；CONFIRMED 且为物品唯一确认申请、物品 PUBLISHED。事务内申请 COMPLETED、物品 ARCHIVED/HANDOVER、撤销双方联系方式授权并增加授权版本；停止发送留言，保留历史。
+      tags:
+      - 认领
+      parameters:
+      - name: claimId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 丙
+      x-requirement-ids:
+      - FR-18
+      x-rule-ids:
+      - BR-05
+      - BR-07
+      - BR-08
+      - BR-09
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-completeClaim-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+            example:
+              expectedVersion: 1
+  /claims/{claimId}/messages:
+    get:
+      operationId: listClaimMessages
+      summary: 查询私有留言
+      description: 仅双方，createdAt、id 升序；终态仍可查询。无关人员返回 404，管理员使用关联举报专用接口。
+      tags:
+      - 认领
+      parameters:
+      - name: claimId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      - *id001
+      - *id002
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessagePageResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 丙
+      x-requirement-ids: &id004
+      - FR-19
+      x-rule-ids:
+      - BR-08
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-listClaimMessages-01
+    post:
+      operationId: sendClaimMessage
+      summary: 发送私有留言
+      description: 认领 PENDING/CONFIRMED 且物品仍 PUBLISHED 时双方可发。终态返回 CONVERSATION_CLOSED；纯文本，不准通过内容夹带联系方式。
+      tags:
+      - 认领
+      parameters:
+      - name: claimId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '201':
+          description: 成功。创建资源。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 丙
+      x-requirement-ids: *id004
+      x-rule-ids:
+      - BR-08
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-sendClaimMessage-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageRequest'
+            example:
+              content: 可以补充说明一下杯底的标记吗
+  /clues/{clueId}/messages:
+    get:
+      operationId: listClueMessages
+      summary: 查询私有留言
+      description: 仅双方，createdAt、id 升序；终态仍可查询。无关人员返回 404，管理员使用关联举报专用接口。
+      tags:
+      - 线索
+      parameters:
+      - name: clueId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      - *id001
+      - *id002
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessagePageResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 乙
+      x-requirement-ids: &id005
+      - FR-24
+      x-rule-ids:
+      - BR-08
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-listClueMessages-01
+    post:
+      operationId: sendClueMessage
+      summary: 发送私有留言
+      description: 线索创建后且寻物信息仍 PUBLISHED 时双方可发。终态返回 CONVERSATION_CLOSED；纯文本，不准通过内容夹带联系方式。
+      tags:
+      - 线索
+      parameters:
+      - name: clueId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '201':
+          description: 成功。创建资源。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 乙
+      x-requirement-ids: *id005
+      x-rule-ids:
+      - BR-08
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-sendClueMessage-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageRequest'
+            example:
+              content: 可以补充说明一下杯底的标记吗
+  /claims/{claimId}/contact-permission:
+    get:
+      operationId: getMyContactPermission
+      summary: 查询自己的授权设置
+      description: 仅参与者，尚未设置返回 version=0、两个选择 false、updatedAt=null。终态允许查自己的设置，但 effective=false，不返回实际联系方式。
+      tags:
+      - 联系方式
+      parameters:
+      - name: claimId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactPermissionResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 丙
+      x-requirement-ids:
+      - FR-06
+      x-rule-ids:
+      - BR-07
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-getMyContactPermission-01
+    put:
+      operationId: setMyContactPermission
+      summary: 设置或撤回自己的授权
+      description: 仅参与者且申请 CONFIRMED、物品 PUBLISHED；更新当前用户向另一方的授权，两字段 false 即撤回。不接受任意用户 ID。授权某字段前须已填写。expectedVersion
+        防止旧页面覆盖撤回结果。
+      tags:
+      - 联系方式
+      parameters:
+      - name: claimId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactPermissionResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 丙
+      x-requirement-ids:
+      - FR-06
+      x-rule-ids:
+      - BR-07
+      - BR-09
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-setMyContactPermission-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactPermissionRequest'
+            example:
+              expectedVersion: 0
+              phoneVisible: true
+              emailVisible: false
+  /claims/{claimId}/counterparty-contact:
+    get:
+      operationId: getCounterpartyContact
+      summary: 获取对方授权的联系方式
+      description: 仅该认领参与者；先检查 CONFIRMED 和物品 PUBLISHED，再检查对方对应授权。非有效阶段返回 409 CONTACT_NOT_ACTIVE；有效阶段无授权返回 403 CONTACT_NOT_AUTHORIZED。交接完成后旧请求也无权获取；响应
+        no-store。
+      tags:
+      - 联系方式
+      parameters:
+      - name: claimId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyContactResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 丙
+      x-requirement-ids:
+      - FR-06
+      x-rule-ids:
+      - BR-07
+      - BR-09
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-getCounterpartyContact-01
+  /items/{itemId}/clues:
+    post:
+      operationId: createClue
+      summary: 提交文字线索
+      description: 仅 PUBLISHED 的 LOST，不能为发布者，同一用户每物品最多一条线索；后续通过留言补充。线索内容对外隐藏。
+      tags:
+      - 线索
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '201':
+          description: 成功。创建资源。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClueResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 乙
+      x-requirement-ids:
+      - FR-23
+      x-rule-ids:
+      - BR-06
+      - BR-09
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-createClue-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClueRequest'
+            example:
+              content: 我在图书馆三楼服务台看到类似的水杯
+    get:
+      operationId: listItemClues
+      summary: 查询该寻物信息收到的线索
+      description: 仅发布者，归档后仍可查，createdAt、id 降序；非发布者使用 /me/clues 查自己的线索。
+      tags:
+      - 线索
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      - *id001
+      - *id002
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CluePageResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 乙
+      x-requirement-ids:
+      - FR-25
+      x-rule-ids: []
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-listItemClues-01
+  /clues/{clueId}:
+    get:
+      operationId: getClue
+      summary: 查询线索私有详情
+      description: 仅该线索提供者与寻物发布者；归档后保留，不产生已读副作用。
+      tags:
+      - 线索
+      parameters:
+      - name: clueId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClueDetailResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 乙
+      x-requirement-ids:
+      - FR-23
+      - FR-25
+      x-rule-ids: []
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-getClue-01
+  /items/{itemId}/resolve:
+    post:
+      operationId: resolveLostItem
+      summary: 标记寻物信息已找回
+      description: 仅发布者，类型 LOST，状态 PUBLISHED；无需已有线索。更新 ARCHIVED/FOUND，停收线索和留言；不改变任何招领信息。
+      tags:
+      - 线索
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemRecordResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 乙
+      x-requirement-ids:
+      - FR-26
+      x-rule-ids:
+      - BR-06
+      - BR-09
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-resolveLostItem-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+            example:
+              expectedVersion: 1
+  /admin/items:
+    get:
+      operationId: listAdminItems
+      summary: 管理员审核列表
+      description: 仅管理员，默认筛选 PENDING_REVIEW；createdAt、id 升序。超 24 小时高亮不纳入当前必须范围。
+      tags:
+      - 管理
+      parameters:
+      - *id001
+      - *id002
+      - name: status
+        in: query
+        required: false
+        description: 查询条件。
+        schema:
+          $ref: '#/components/schemas/ItemStatus'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemRecordPageResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 丙
+      x-requirement-ids:
+      - FR-20
+      x-rule-ids: []
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-listAdminItems-01
+  /admin/items/{itemId}:
+    get:
+      operationId: getAdminItem
+      summary: 管理员审核详情
+      description: 仅管理员；不附带其他用户凭证、留言、联系方式。
+      tags:
+      - 管理
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemRecordResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 丙
+      x-requirement-ids:
+      - FR-20
+      x-rule-ids: []
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-getAdminItem-01
+  /admin/items/{itemId}/approve:
+    post:
+      operationId: approveItem
+      summary: 审核通过
+      description: 仅管理员，PENDING_REVIEW 转 PUBLISHED，publishedAt 更新为本次通过时间；写审核记录。
+      tags:
+      - 管理
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemRecordResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 丙
+      x-requirement-ids:
+      - FR-20
+      x-rule-ids:
+      - BR-04
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-approveItem-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+            example:
+              expectedVersion: 1
+  /admin/items/{itemId}/return:
+    post:
+      operationId: returnItem
+      summary: 审核退回
+      description: 仅管理员，PENDING_REVIEW 转 RETURNED，原因必填，发布者可查看。
+      tags:
+      - 管理
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemRecordResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 丙
+      x-requirement-ids:
+      - FR-20
+      x-rule-ids:
+      - BR-04
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-returnItem-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonVersionRequest'
+            example:
+              expectedVersion: 1
+              reason: 物品特征与所描述的情况不一致
+  /admin/items/{itemId}/review-records:
+    get:
+      operationId: listReviewRecords
+      summary: 查询审核处置记录
+      description: 仅管理员；createdAt、id 降序。
+      tags:
+      - 管理
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      - *id001
+      - *id002
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewRecordPageResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 丙
+      x-requirement-ids:
+      - FR-20
+      - FR-21
+      x-rule-ids: []
+      x-scope: core
+      x-contract-status: draft
+      x-test-ids:
+      - CT-listReviewRecords-01
+  /admin/items/{itemId}/take-down:
+    post:
+      operationId: adminTakeDown
+      summary: 下架违规信息
+      description: 仅管理员，PUBLISHED 转 OFF_SHELF/VIOLATION；事务内 PENDING/CONFIRMED 申请转 CLOSED，撤回授权，停止留言并审计。归档记录不以此接口删除。
+      tags:
+      - 管理
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemRecordResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 丙
+      x-requirement-ids:
+      - FR-21
+      x-rule-ids:
+      - BR-04
+      - BR-07
+      - BR-09
+      x-scope: optional
+      x-contract-status: draft
+      x-test-ids:
+      - CT-adminTakeDown-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonVersionRequest'
+            example:
+              expectedVersion: 1
+              reason: 物品特征与所描述的情况不一致
+  /reports:
+    post:
+      operationId: createReport
+      summary: 提交举报
+      description: 普通举报须针对当前可见的公共物品；关联会话举报只允许该会话参与者且目标属于该物品，即使已归档也可举报。线索和认领上下文最多一个。不接受任意凭证附件。
+      tags:
+      - 举报
+      parameters:
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '201':
+          description: 成功。创建资源。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 丙
+      x-requirement-ids:
+      - FR-22
+      - FR-27
+      x-rule-ids:
+      - BR-10
+      x-scope: optional
+      x-contract-status: draft
+      x-test-ids:
+      - CT-createReport-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportRequest'
+  /me/reports:
+    get:
+      operationId: listMyReports
+      summary: 查询我提交的举报
+      description: 只返回当前举报人的记录与处理结论，createdAt、id 降序。
+      tags:
+      - 举报
+      parameters:
+      - *id001
+      - *id002
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportPageResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 丙
+      x-requirement-ids:
+      - FR-22
+      x-rule-ids: []
+      x-scope: optional
+      x-contract-status: draft
+      x-test-ids:
+      - CT-listMyReports-01
+  /admin/reports:
+    get:
+      operationId: listAdminReports
+      summary: 管理员举报列表
+      description: 仅管理员，默认 PENDING；createdAt、id 升序。
+      tags:
+      - 举报
+      parameters:
+      - *id001
+      - *id002
+      - name: status
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: string
+          description: ''
+          enum:
+          - PENDING
+          - RESOLVED
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportPageResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 丙
+      x-requirement-ids:
+      - FR-22
+      x-rule-ids: []
+      x-scope: optional
+      x-contract-status: draft
+      x-test-ids:
+      - CT-listAdminReports-01
+  /admin/reports/{reportId}:
+    get:
+      operationId: getAdminReport
+      summary: 管理员举报详情
+      description: 仅管理员；私有会话通过 conversation 接口按关联关系读取。
+      tags:
+      - 举报
+      parameters:
+      - name: reportId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 丙
+      x-requirement-ids:
+      - FR-22
+      x-rule-ids: []
+      x-scope: optional
+      x-contract-status: draft
+      x-test-ids:
+      - CT-getAdminReport-01
+  /admin/reports/{reportId}/conversation:
+    get:
+      operationId: getReportConversation
+      summary: 查看举报关联凭证和留言
+      description: 仅管理员且举报 PENDING；必须有合法关联上下文，无关联返回 404，举报结束返回 409 REPORT_STATE_CONFLICT。记录管理员、举报、上下文、时间；留言按 createdAt、id
+        升序。
+      tags:
+      - 举报
+      parameters:
+      - name: reportId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      - *id001
+      - *id002
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportConversationResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 丙
+      x-requirement-ids:
+      - FR-19
+      - FR-22
+      - FR-24
+      x-rule-ids:
+      - BR-10
+      x-scope: optional
+      x-contract-status: draft
+      x-test-ids:
+      - CT-getReportConversation-01
+  /admin/reports/{reportId}/resolve:
+    post:
+      operationId: resolveReport
+      summary: 处理举报
+      description: 仅管理员，举报 PENDING。KEEP 仅写结论；TAKE_DOWN 调用统一违规下架规则；REJECT_PENDING_CLAIM 只处理关联 PENDING 申请。业务处置与举报
+        RESOLVED 同一事务；冲突时均不修改。
+      tags:
+      - 举报
+      parameters:
+      - name: reportId
+        in: path
+        required: true
+        description: 目标资源编号。
+        schema:
+          $ref: '#/components/schemas/Id'
+      - $ref: '#/components/parameters/CsrfHeader'
+      security:
+      - SessionAuth: []
+      responses:
+        '200':
+          description: 成功。
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 所有响应使用 no-store；特别是私有详情、验证码、CSRF 和联系方式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      x-owner: 丙
+      x-requirement-ids:
+      - FR-22
+      x-rule-ids:
+      - BR-10
+      - BR-09
+      x-scope: optional
+      x-contract-status: draft
+      x-test-ids:
+      - CT-resolveReport-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveReportRequest'
+components:
+  securitySchemes:
+    SessionAuth:
+      type: apiKey
+      in: cookie
+      name: JSESSIONID
+      description: 登录会话 Cookie；由浏览器管理，不是 Bearer/JWT。匿名会话不等于已认证身份。
+  parameters:
+    CsrfHeader:
+      name: X-CSRF-TOKEN
+      in: header
+      required: true
+      description: 所有写接口包括注册、登录必须携带；通过 GET /auth/csrf 获取，关联当前会话。
+      schema:
+        type: string
+        minLength: 1
+  schemas:
+    Id: *id003
+    ItemStatus:
+      type: string
+      description: 物品审核与发布状态。
+      enum:
+      - PENDING_REVIEW
+      - RETURNED
+      - PUBLISHED
+      - OFF_SHELF
+      - ARCHIVED
+    ClaimStatus:
+      type: string
+      description: CLOSED 为本草案补充的系统关闭状态，不等同于发布人驳回。
+      enum:
+      - PENDING
+      - CONFIRMED
+      - REJECTED
+      - COMPLETED
+      - CLOSED
+    EmptyData:
+      type: object
+      description: 操作成功，无额外数据。
+      additionalProperties: false
+      properties: {}
+    FieldError:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        field:
+          type: string
+          description: 字段路径。
+        message:
+          type: string
+          description: 字段错误说明。
+      required:
+      - field
+      - message
+    ErrorResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: 稳定的业务错误码，见接口文档错误码表。
+        message:
+          type: string
+          description: 可向用户展示的错误说明，不包含内部堆栈。
+        data:
+          type: object
+          nullable: true
+          enum:
+          - null
+          description: 错误响应固定为 null。
+        requestId:
+          type: string
+          description: 请求追踪编号。
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+      required:
+      - code
+      - message
+      - data
+      - requestId
+      - errors
+    CsrfData:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        headerName:
+          type: string
+          description: 固定请求头。
+          enum:
+          - X-CSRF-TOKEN
+        token:
+          type: string
+          description: 与会话绑定的 CSRF 令牌。
+      required:
+      - headerName
+      - token
+    SendCodeRequest:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        email: &id006
+          type: string
+          description: ASCII 邮箱地址；去首尾空白后按小写规范化，学校邮箱域名由项目配置决定。
+          format: email
+          maxLength: 254
+          pattern: ^[\x21-\x7E]+$
+      required:
+      - email
+    CodeSentData:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        expiresInSeconds:
+          type: integer
+          description: 有效期。
+          enum:
+          - 300
+        retryAfterSeconds:
+          type: integer
+          description: 再次发送等待时间，草案 60 秒。
+          enum:
+          - 60
+      required:
+      - expiresInSeconds
+      - retryAfterSeconds
+    RegisterRequest:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        studentId:
+          type: string
+          description: 数字学号；实际学校位数待确定，当前结构上限 32。
+          pattern: ^[0-9]+$
+          maxLength: 32
+        realName:
+          type: string
+          description: 与模拟学生名册一致，2～10 个汉字。
+          minLength: 2
+          maxLength: 10
+          pattern: ^[\u3400-\u9fff]+$
+        campusCardNo:
+          type: string
+          description: 唯一校园卡号；实际格式待确认，当前 1～32 个 ASCII 可见字符。
+          minLength: 1
+          maxLength: 32
+          pattern: ^[\x21-\x7E]+$
+        email: *id006
+        emailCode:
+          type: string
+          description: 注册用途验证码。
+          pattern: ^[0-9]{6}$
+        password: &id008
+          type: string
+          description: 至少 8 字符且含字母和数字；草案上限 64 字符，不能记录到日志。
+          minLength: 8
+          maxLength: 64
+          pattern: ^(?=.*[A-Za-z])(?=.*[0-9]).+$
+          writeOnly: true
+        nickname:
+          type: string
+          description: 可选公开昵称；未填写使用不暴露真实身份的默认昵称。
+          minLength: 1
+          maxLength: 30
+      required:
+      - studentId
+      - realName
+      - campusCardNo
+      - email
+      - emailCode
+      - password
+    LoginRequest:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        account:
+          type: string
+          description: 学号、校园卡号或预置管理员账号；统一登录标识表排除跨字段身份歧义。
+          minLength: 1
+          maxLength: 32
+          pattern: ^[\x21-\x7E]+$
+        password:
+          type: string
+          description: 登录密码。
+          minLength: 1
+          maxLength: 64
+          writeOnly: true
+      required:
+      - account
+      - password
+    Me:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        id: *id003
+        studentId:
+          type: string
+          description: 自己的学号。学生从绑定名册取得；预置管理员为 null。
+          nullable: true
+        realName:
+          type: string
+          description: 自己的姓名。学生从绑定名册取得；预置管理员为 null。
+          nullable: true
+        campusCardNo:
+          type: string
+          description: 自己的卡号。学生从绑定名册取得；预置管理员为 null。
+          nullable: true
+        nickname:
+          type: string
+          description: 公开昵称。
+        email: *id006
+        phone:
+          type: string
+          description: 自己的手机号，未填写为 null。
+          nullable: true
+          maxLength: 20
+        role:
+          type: string
+          description: 管理员由预置账号产生，注册不能指定角色。
+          enum:
+          - STUDENT
+          - ADMIN
+        version: &id021
+          type: integer
+          description: 当前资源版本，从 1 开始；更新成功后递增。
+          minimum: 1
+      required:
+      - id
+      - studentId
+      - realName
+      - campusCardNo
+      - nickname
+      - email
+      - phone
+      - role
+      - version
+    ProfilePatchRequest:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        expectedVersion: &id007
+          type: integer
+          description: 调用方最后读取的目标资源 version；不一致返回 409 VERSION_CONFLICT。
+          minimum: 1
+        nickname:
+          type: string
+          description: 昵称。
+          minLength: 1
+          maxLength: 30
+        phone:
+          type: string
+          description: 手机号；null 表示清空。
+          nullable: true
+          pattern: ^\+?[0-9 -]{6,20}$
+          maxLength: 20
+      minProperties: 2
+      required:
+      - expectedVersion
+    ChangeEmailRequest:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        expectedVersion: *id007
+        email: *id006
+        emailCode:
+          type: string
+          description: 绑定到当前用户和新邮箱的修改邮箱验证码。
+          pattern: ^[0-9]{6}$
+      required:
+      - expectedVersion
+      - email
+      - emailCode
+    ChangePasswordRequest:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        oldPassword:
+          type: string
+          description: 原密码。
+          minLength: 1
+          maxLength: 64
+          writeOnly: true
+        newPassword: *id008
+      required:
+      - oldPassword
+      - newPassword
+    VersionRequest:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        expectedVersion: *id007
+      required:
+      - expectedVersion
+    ReasonVersionRequest:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        expectedVersion: *id007
+        reason: &id022
+          type: string
+          description: 去除首尾空白后必填；草案上限 500 字。
+          minLength: 1
+          maxLength: 500
+      required:
+      - expectedVersion
+      - reason
+    Image:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        id: *id003
+        url:
+          type: string
+          description: 受物品可见性控制的图片地址，例如 /api/v1/images/501。
+        mediaType:
+          type: string
+          description: ''
+          enum:
+          - image/jpeg
+          - image/png
+        sizeBytes:
+          type: integer
+          description: 实际字节数。
+          minimum: 1
+          maximum: 2097152
+      required:
+      - id
+      - url
+      - mediaType
+      - sizeBytes
+    UploadImageRequest:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        file:
+          type: string
+          description: JPG/PNG；校验真实内容，大小 1～2097152 字节。
+          format: binary
+      required:
+      - file
+    Publisher:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        id: *id003
+        nickname:
+          type: string
+          description: 只返回昵称，不返回真实姓名、学号、联系方式。
+      required:
+      - id
+      - nickname
+    CreateItemRequest:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        type: *id009
+        category: *id010
+        location: &id011
+          type: string
+          description: 地点，去除首尾空白。
+          minLength: 1
+          maxLength: 50
+        occurredDate: &id012
+          type: string
+          description: 按 Asia/Shanghai 判断的业务日期，不能晚于当天。
+          format: date
+        title: &id013
+          type: string
+          description: 标题。
+          minLength: 1
+          maxLength: 50
+        description: &id014
+          type: string
+          description: 物品说明，不允许包含联系方式。
+          minLength: 10
+          maxLength: 500
+        imageIds: &id015
+          type: array
+          items: *id003
+          maxItems: 3
+          uniqueItems: true
+          description: 当前用户上传且未被其他物品绑定的图片。缺省无图。
+      required:
+      - type
+      - category
+      - location
+      - occurredDate
+      - title
+      - description
+    EditItemRequest:
+      type: object
+      description: PATCH 只更新给出的字段；imageIds 为完整替换，空数组删除所有关联。编辑成功重回待审核。
+      additionalProperties: false
+      properties:
+        expectedVersion: *id007
+        category: *id010
+        location: *id011
+        occurredDate: *id012
+        title: *id013
+        description: *id014
+        imageIds: *id015
+      minProperties: 2
+      required:
+      - expectedVersion
+    PublicItem:
+      type: object
+      description: 仅公开字段；列表/详情只返回 PUBLISHED 物品。
+      additionalProperties: false
+      properties:
+        id: *id003
+        type: *id009
+        category: *id010
+        location: *id011
+        occurredDate: *id012
+        title: *id013
+        description: *id014
+        images: &id016
+          type: array
+          items:
+            $ref: '#/components/schemas/Image'
+          maxItems: 3
+        publisher: &id017
+          $ref: '#/components/schemas/Publisher'
+        publishedAt: &id018
+          type: string
+          description: 带时区的 ISO 8601 时间；服务端输出 UTC，页面按北京时间展示。
+          format: date-time
+          nullable: true
+        createdAt: &id019
+          type: string
+          description: 带时区的 ISO 8601 时间；服务端输出 UTC，页面按北京时间展示。
+          format: date-time
+        hasConfirmedClaim: &id020
+          type: boolean
+          description: 招领信息是否已有确认人；不暴露申请编号或申请人身份。
+      required:
+      - id
+      - type
+      - category
+      - location
+      - occurredDate
+      - title
+      - description
+      - images
+      - publisher
+      - publishedAt
+      - createdAt
+      - hasConfirmedClaim
+    ItemRecord:
+      type: object
+      description: 自己的发布、管理员审核及私有参与者详情中的物品记录；不包含联系方式。
+      additionalProperties: false
+      properties:
+        id: *id003
+        type: *id009
+        category: *id010
+        location: *id011
+        occurredDate: *id012
+        title: *id013
+        description: *id014
+        images: *id016
+        publisher: *id017
+        publishedAt: *id018
+        createdAt: *id019
+        hasConfirmedClaim: *id020
+        status:
+          $ref: '#/components/schemas/ItemStatus'
+        version: *id021
+        reviewReason:
+          type: string
+          description: 最近一次退回原因，无则 null。
+          nullable: true
+        closureReason:
+          type: string
+          description: 关闭原因。
+          nullable: true
+          enum:
+          - FOUND
+          - HANDOVER
+          - OWNER_WITHDRAWN
+          - VIOLATION
+          - null
+        updatedAt: *id019
+      required:
+      - id
+      - type
+      - category
+      - location
+      - occurredDate
+      - title
+      - description
+      - images
+      - publisher
+      - publishedAt
+      - createdAt
+      - hasConfirmedClaim
+      - status
+      - version
+      - reviewReason
+      - closureReason
+      - updatedAt
+    ClaimRequest:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        description:
+          type: string
+          description: 认领特征说明。上限 500 字为草案设计值。
+          minLength: 10
+          maxLength: 500
+      required:
+      - description
+    Claim:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        id: *id003
+        itemId: *id003
+        applicant:
+          $ref: '#/components/schemas/Publisher'
+        publisher:
+          $ref: '#/components/schemas/Publisher'
+        description:
+          type: string
+          description: 认领凭证，不公开。
+        status:
+          $ref: '#/components/schemas/ClaimStatus'
+        reason:
+          type: string
+          description: 驳回或关闭原因，无则 null。
+          nullable: true
+        version: *id021
+        createdAt: *id019
+        updatedAt: *id019
+      required:
+      - id
+      - itemId
+      - applicant
+      - publisher
+      - description
+      - status
+      - reason
+      - version
+      - createdAt
+      - updatedAt
+    ClaimDetail:
+      type: object
+      description: 归档后双方仍能在此查看相关物品，不依赖公开详情接口。
+      additionalProperties: false
+      properties:
+        claim:
+          $ref: '#/components/schemas/Claim'
+        item:
+          $ref: '#/components/schemas/ItemRecord'
+      required:
+      - claim
+      - item
+    MessageRequest:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        content:
+          type: string
+          description: 纯文本，1～1000 字为草案限制；禁止 HTML 和联系方式，交换联系方式使用授权入口。
+          minLength: 1
+          maxLength: 1000
+      required:
+      - content
+    Message:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        id: *id003
+        sender:
+          $ref: '#/components/schemas/Publisher'
+        content:
+          type: string
+          description: 纯文本。
+        createdAt: *id019
+      required:
+      - id
+      - sender
+      - content
+      - createdAt
+    ClueRequest:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        content:
+          type: string
+          description: 文字线索，不包含联系方式；不支持图片或关联招领编号。
+          minLength: 10
+          maxLength: 500
+      required:
+      - content
+    Clue:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        id: *id003
+        lostItemId: *id003
+        provider:
+          $ref: '#/components/schemas/Publisher'
+        publisher:
+          $ref: '#/components/schemas/Publisher'
+        content:
+          type: string
+          description: 只向双方返回的线索。
+        createdAt: *id019
+      required:
+      - id
+      - lostItemId
+      - provider
+      - publisher
+      - content
+      - createdAt
+    ClueDetail:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        clue:
+          $ref: '#/components/schemas/Clue'
+        item:
+          $ref: '#/components/schemas/ItemRecord'
+      required:
+      - clue
+      - item
+    ContactPermissionRequest:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        expectedVersion:
+          type: integer
+          description: 首次设置为 0，后续使用查询到的授权版本。
+          minimum: 0
+        phoneVisible:
+          type: boolean
+          description: 是否授权该申请另一方查看自己的当前手机号。
+        emailVisible:
+          type: boolean
+          description: 是否授权该申请另一方查看自己的当前邮箱。
+      required:
+      - expectedVersion
+      - phoneVisible
+      - emailVisible
+    ContactPermission:
+      type: object
+      description: 仅返回自己的授权设置，不含实际联系方式；完成后 effective=false。
+      additionalProperties: false
+      properties:
+        claimId: *id003
+        phoneVisible:
+          type: boolean
+          description: 原始授权选择。
+        emailVisible:
+          type: boolean
+          description: 原始授权选择。
+        effective:
+          type: boolean
+          description: 仅 claim 为 CONFIRMED 且物品仍有效时为 true。
+        version:
+          type: integer
+          description: 未设置时为 0。
+          minimum: 0
+        updatedAt:
+          type: string
+          description: 带时区的 ISO 8601 时间；服务端输出 UTC，页面按北京时间展示。
+          format: date-time
+          nullable: true
+      required:
+      - claimId
+      - phoneVisible
+      - emailVisible
+      - effective
+      - version
+      - updatedAt
+    CounterpartyContact:
+      type: object
+      description: 只出现已授权且实际存在的字段；不可见字段省略，不返回掩码或 null 占位。至少一种联系方式被授权才能成功。
+      additionalProperties: false
+      properties:
+        claimId: *id003
+        phone:
+          type: string
+          description: 对方授权的当前手机号。
+          maxLength: 20
+        email: *id006
+      required:
+      - claimId
+    ReportRequest:
+      type: object
+      description: claimId 与 clueId 最多填写一个；必须属于 itemId，且举报人必须是该会话参与者。不提供时只举报公开物品。
+      additionalProperties: false
+      properties:
+        itemId: *id003
+        claimId: *id003
+        clueId: *id003
+        reason: *id022
+      required:
+      - itemId
+      - reason
+      not:
+        required:
+        - claimId
+        - clueId
+    Report:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        id: *id003
+        itemId: *id003
+        claimId:
+          type: string
+          description: 正整数 ID，以字符串传输，不在前端转为 Number。
+          pattern: ^[1-9][0-9]*$
+          example: '1001'
+          nullable: true
+        clueId:
+          type: string
+          description: 正整数 ID，以字符串传输，不在前端转为 Number。
+          pattern: ^[1-9][0-9]*$
+          example: '1001'
+          nullable: true
+        reason: *id022
+        status:
+          type: string
+          description: ''
+          enum:
+          - PENDING
+          - RESOLVED
+        action:
+          type: string
+          description: ''
+          nullable: true
+          enum:
+          - KEEP
+          - TAKE_DOWN
+          - REJECT_PENDING_CLAIM
+          - null
+        resolution:
+          type: string
+          description: 处理结论。
+          nullable: true
+        version: *id021
+        createdAt: *id019
+        resolvedAt:
+          type: string
+          description: 带时区的 ISO 8601 时间；服务端输出 UTC，页面按北京时间展示。
+          format: date-time
+          nullable: true
+      required:
+      - id
+      - itemId
+      - claimId
+      - clueId
+      - reason
+      - status
+      - action
+      - resolution
+      - version
+      - createdAt
+      - resolvedAt
+    ResolveReportRequest:
+      type: object
+      description: 仅可驳回尚未确认且与举报直接关联的申请；已确认申请不能用此操作直接回退。
+      additionalProperties: false
+      properties:
+        expectedVersion: *id007
+        action:
+          type: string
+          description: ''
+          enum:
+          - KEEP
+          - TAKE_DOWN
+          - REJECT_PENDING_CLAIM
+        reason: *id022
+      required:
+      - expectedVersion
+      - action
+      - reason
+    ReviewRecord:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        id: *id003
+        itemId: *id003
+        action:
+          type: string
+          description: ''
+          enum:
+          - APPROVE
+          - RETURN
+          - TAKE_DOWN
+        reason:
+          type: string
+          description: ''
+          nullable: true
+        operatorId: *id003
+        createdAt: *id019
+      required:
+      - id
+      - itemId
+      - action
+      - reason
+      - operatorId
+      - createdAt
+    ReportConversation:
+      type: object
+      description: 管理员通过举报上下文访问，必须记录访问审计，不返回联系方式。
+      additionalProperties: false
+      properties:
+        kind:
+          type: string
+          description: ''
+          enum:
+          - CLAIM
+          - CLUE
+        contextId: *id003
+        evidenceText:
+          type: string
+          description: 举报所关联的认领说明或线索内容。
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        page:
+          type: integer
+          description: ''
+          minimum: 1
+        pageSize:
+          type: integer
+          description: ''
+          minimum: 1
+          maximum: 50
+        total:
+          type: integer
+          description: ''
+          minimum: 0
+      required:
+      - kind
+      - contextId
+      - evidenceText
+      - items
+      - page
+      - pageSize
+      - total
+    CsrfDataResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/CsrfData'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    CodeSentDataResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/CodeSentData'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    MeResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/Me'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    EmptyDataResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/EmptyData'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    ItemRecordPageResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/ItemRecordPage'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    ItemRecordResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/ItemRecord'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    ClaimPageResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/ClaimPage'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    CluePageResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/CluePage'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    ImageResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/Image'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    PublicItemPageResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/PublicItemPage'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    PublicItemResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/PublicItem'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    ClaimResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/Claim'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    ClaimDetailResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/ClaimDetail'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    MessagePageResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/MessagePage'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    MessageResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/Message'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    ContactPermissionResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/ContactPermission'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    CounterpartyContactResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/CounterpartyContact'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    ClueResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/Clue'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    ClueDetailResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/ClueDetail'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    ReviewRecordPageResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/ReviewRecordPage'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    ReportResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/Report'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    ReportPageResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/ReportPage'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    ReportConversationResponse:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: ''
+          enum:
+          - OK
+        message:
+          type: string
+          description: 提示语，客户端不依赖具体文案分支。
+        data:
+          $ref: '#/components/schemas/ReportConversation'
+        requestId:
+          type: string
+          description: 请求追踪编号。
+      required:
+      - code
+      - message
+      - data
+      - requestId
+    ItemRecordPage:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemRecord'
+        page:
+          type: integer
+          description: ''
+          minimum: 1
+        pageSize:
+          type: integer
+          description: ''
+          minimum: 1
+          maximum: 50
+        total:
+          type: integer
+          description: ''
+          minimum: 0
+      required:
+      - items
+      - page
+      - pageSize
+      - total
+    ClaimPage:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Claim'
+        page:
+          type: integer
+          description: ''
+          minimum: 1
+        pageSize:
+          type: integer
+          description: ''
+          minimum: 1
+          maximum: 50
+        total:
+          type: integer
+          description: ''
+          minimum: 0
+      required:
+      - items
+      - page
+      - pageSize
+      - total
+    CluePage:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Clue'
+        page:
+          type: integer
+          description: ''
+          minimum: 1
+        pageSize:
+          type: integer
+          description: ''
+          minimum: 1
+          maximum: 50
+        total:
+          type: integer
+          description: ''
+          minimum: 0
+      required:
+      - items
+      - page
+      - pageSize
+      - total
+    PublicItemPage:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicItem'
+        page:
+          type: integer
+          description: ''
+          minimum: 1
+        pageSize:
+          type: integer
+          description: ''
+          minimum: 1
+          maximum: 50
+        total:
+          type: integer
+          description: ''
+          minimum: 0
+      required:
+      - items
+      - page
+      - pageSize
+      - total
+    MessagePage:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        page:
+          type: integer
+          description: ''
+          minimum: 1
+        pageSize:
+          type: integer
+          description: ''
+          minimum: 1
+          maximum: 50
+        total:
+          type: integer
+          description: ''
+          minimum: 0
+      required:
+      - items
+      - page
+      - pageSize
+      - total
+    ReviewRecordPage:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewRecord'
+        page:
+          type: integer
+          description: ''
+          minimum: 1
+        pageSize:
+          type: integer
+          description: ''
+          minimum: 1
+          maximum: 50
+        total:
+          type: integer
+          description: ''
+          minimum: 0
+      required:
+      - items
+      - page
+      - pageSize
+      - total
+    ReportPage:
+      type: object
+      description: ''
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Report'
+        page:
+          type: integer
+          description: ''
+          minimum: 1
+        pageSize:
+          type: integer
+          description: ''
+          minimum: 1
+          maximum: 50
+        total:
+          type: integer
+          description: ''
+          minimum: 0
+      required:
+      - items
+      - page
+      - pageSize
+      - total
+  responses:
+    Error400:
+      description: 参数或业务输入不合法。可能错误码：VALIDATION_ERROR, IDENTITY_MISMATCH, EMAIL_CODE_INVALID, EMAIL_CODE_EXPIRED,
+        EMAIL_CODE_USED, OLD_PASSWORD_INCORRECT, CONTACT_FIELD_MISSING, REPORT_CONTEXT_INVALID
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            enum:
+            - no-store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Error401:
+      description: 未登录、会话失效或凭据错误。可能错误码：AUTH_REQUIRED, BAD_CREDENTIALS
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            enum:
+            - no-store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Error403:
+      description: 权限不足、CSRF 校验失败或尚未授权。可能错误码：FORBIDDEN, CSRF_INVALID, SELF_OPERATION_NOT_ALLOWED, CONTACT_NOT_AUTHORIZED
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            enum:
+            - no-store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Error404:
+      description: 不存在或对当前访问者不可见。可能错误码：RESOURCE_NOT_FOUND
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            enum:
+            - no-store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Error409:
+      description: 版本、状态或唯一性冲突。可能错误码：VERSION_CONFLICT, IDENTITY_ALREADY_BOUND, ACCOUNT_IDENTIFIER_CONFLICT, EMAIL_ALREADY_BOUND,
+        ITEM_STATE_CONFLICT, CLAIM_ALREADY_EXISTS, ITEM_ALREADY_CLAIMED, CLAIM_STATE_CONFLICT, CLUE_ALREADY_EXISTS,
+        CONTACT_NOT_ACTIVE, CONVERSATION_CLOSED, IMAGE_ALREADY_BOUND, REPORT_STATE_CONFLICT
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            enum:
+            - no-store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Error413:
+      description: 图片大小超限。可能错误码：IMAGE_TOO_LARGE
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            enum:
+            - no-store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Error415:
+      description: 请求或文件类型不支持。可能错误码：UNSUPPORTED_MEDIA_TYPE
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            enum:
+            - no-store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Error429:
+      description: 请求过于频繁。可能错误码：RATE_LIMITED
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            enum:
+            - no-store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Error500:
+      description: 服务端内部错误。可能错误码：INTERNAL_ERROR
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            enum:
+            - no-store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+x-confirmed-decisions:
+  D-01: 简化线索：文字、私有留言、标记找回
+  D-02: 联系方式默认隐藏，保留授权展示
+  D-03: 认领申请提交后开放留言
+  D-04: 认领确认后授权，交接完成后失效
+x-design-status: 草案：接口字段、补充状态、限制和分工供团队评审；不是老师原文要求。

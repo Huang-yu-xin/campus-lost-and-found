@@ -1,0 +1,78 @@
+﻿用例ID,需求编号,接口ID,场景,前置条件,步骤,预期结果,执行状态
+CT-getCsrf-01,SUP-01,getCsrf,正向合同场景：获取 CSRF 令牌,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/auth/csrf，检查数据库副作用（如适用）。,HTTP 200；返回 CsrfDataResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-sendRegistrationCode-01,FR-01,sendRegistrationCode,正向合同场景：发送注册验证码,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 SendCodeRequest。,执行 POST /api/v1/auth/email-codes，检查数据库副作用（如适用）。,HTTP 200；返回 CodeSentDataResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-register-01,FR-01,register,正向合同场景：注册并绑定校园身份,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 RegisterRequest。,执行 POST /api/v1/auth/register，检查数据库副作用（如适用）。,HTTP 201；返回 MeResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-login-01,FR-02,login,正向合同场景：登录,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 LoginRequest。,执行 POST /api/v1/auth/login，检查数据库副作用（如适用）。,HTTP 200；返回 MeResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-logout-01,FR-02,logout,正向合同场景：退出登录,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 POST /api/v1/auth/logout，检查数据库副作用（如适用）。,HTTP 200；返回 EmptyDataResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-getMe-01,FR-06,getMe,正向合同场景：查询自己的资料,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/me，检查数据库副作用（如适用）。,HTTP 200；返回 MeResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-updateProfile-01,FR-06,updateProfile,正向合同场景：修改昵称和手机号,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 ProfilePatchRequest。,执行 PATCH /api/v1/me，检查数据库副作用（如适用）。,HTTP 200；返回 MeResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-sendChangeEmailCode-01,FR-06,sendChangeEmailCode,正向合同场景：发送修改邮箱验证码,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 SendCodeRequest。,执行 POST /api/v1/me/email-codes，检查数据库副作用（如适用）。,HTTP 200；返回 CodeSentDataResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-changeEmail-01,FR-06,changeEmail,正向合同场景：确认修改邮箱,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 ChangeEmailRequest。,执行 PUT /api/v1/me/email，检查数据库副作用（如适用）。,HTTP 200；返回 MeResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-changePassword-01,FR-03,changePassword,正向合同场景：修改密码,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 ChangePasswordRequest。,执行 PUT /api/v1/me/password，检查数据库副作用（如适用）。,HTTP 200；返回 EmptyDataResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-listMyItems-01,FR-04,listMyItems,正向合同场景：查询我的发布,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/me/items，检查数据库副作用（如适用）。,HTTP 200；返回 ItemRecordPageResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-getMyItem-01,FR-04,getMyItem,正向合同场景：查询我的发布详情,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/me/items/{itemId}，检查数据库副作用（如适用）。,HTTP 200；返回 ItemRecordResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-listMyClaims-01,FR-05,listMyClaims,正向合同场景：查询我提交的认领,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/me/claims，检查数据库副作用（如适用）。,HTTP 200；返回 ClaimPageResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-listReceivedClaims-01,"FR-15,FR-28",listReceivedClaims,正向合同场景：查询我收到的认领,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/me/received-claims，检查数据库副作用（如适用）。,HTTP 200；返回 ClaimPageResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-listMyClues-01,FR-25,listMyClues,正向合同场景：查询我提供的线索,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/me/clues，检查数据库副作用（如适用）。,HTTP 200；返回 CluePageResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-listReceivedClues-01,FR-25,listReceivedClues,正向合同场景：查询我收到的线索,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/me/received-clues，检查数据库副作用（如适用）。,HTTP 200；返回 CluePageResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-uploadImage-01,FR-10,uploadImage,正向合同场景：上传物品图片,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 UploadImageRequest。,执行 POST /api/v1/uploads/images，检查数据库副作用（如适用）。,HTTP 201；返回 ImageResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-getImage-01,"FR-10,FR-14",getImage,正向合同场景：获取图片内容,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/images/{imageId}，检查数据库副作用（如适用）。,HTTP 200；返回 JPEG/PNG 图片；数据归属、字段和副作用与接口描述一致。,未执行
+CT-createItem-01,"FR-07,FR-10",createItem,正向合同场景：发布物品信息,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 CreateItemRequest。,执行 POST /api/v1/items，检查数据库副作用（如适用）。,HTTP 201；返回 ItemRecordResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-editItem-01,FR-08,editItem,正向合同场景：编辑并重新提交审核,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 EditItemRequest。,执行 PATCH /api/v1/items/{itemId}，检查数据库副作用（如适用）。,HTTP 200；返回 ItemRecordResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-withdrawItem-01,FR-09,withdrawItem,正向合同场景：主动下架或关闭寻找,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 VersionRequest。,执行 POST /api/v1/items/{itemId}/withdraw，检查数据库副作用（如适用）。,HTTP 200；返回 ItemRecordResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-listPublicItems-01,"FR-11,FR-12,FR-13",listPublicItems,正向合同场景：公开列表与搜索,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/items，检查数据库副作用（如适用）。,HTTP 200；返回 PublicItemPageResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-getPublicItem-01,FR-14,getPublicItem,正向合同场景：公开物品详情,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/items/{itemId}，检查数据库副作用（如适用）。,HTTP 200；返回 PublicItemResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-createClaim-01,FR-15,createClaim,正向合同场景：提交认领申请,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 ClaimRequest。,执行 POST /api/v1/items/{itemId}/claims，检查数据库副作用（如适用）。,HTTP 201；返回 ClaimResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-getClaim-01,"FR-05,FR-15",getClaim,正向合同场景：认领私有详情,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/claims/{claimId}，检查数据库副作用（如适用）。,HTTP 200；返回 ClaimDetailResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-confirmClaim-01,FR-16,confirmClaim,正向合同场景：确认认领人,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 VersionRequest。,执行 POST /api/v1/claims/{claimId}/confirm，检查数据库副作用（如适用）。,HTTP 200；返回 ClaimResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-rejectClaim-01,FR-17,rejectClaim,正向合同场景：驳回认领,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 ReasonVersionRequest。,执行 POST /api/v1/claims/{claimId}/reject，检查数据库副作用（如适用）。,HTTP 200；返回 ClaimResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-completeClaim-01,FR-18,completeClaim,正向合同场景：确认交接完成,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 VersionRequest。,执行 POST /api/v1/claims/{claimId}/complete，检查数据库副作用（如适用）。,HTTP 200；返回 ClaimResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-listClaimMessages-01,FR-19,listClaimMessages,正向合同场景：查询私有留言,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/claims/{claimId}/messages，检查数据库副作用（如适用）。,HTTP 200；返回 MessagePageResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-sendClaimMessage-01,FR-19,sendClaimMessage,正向合同场景：发送私有留言,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 MessageRequest。,执行 POST /api/v1/claims/{claimId}/messages，检查数据库副作用（如适用）。,HTTP 201；返回 MessageResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-listClueMessages-01,FR-24,listClueMessages,正向合同场景：查询私有留言,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/clues/{clueId}/messages，检查数据库副作用（如适用）。,HTTP 200；返回 MessagePageResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-sendClueMessage-01,FR-24,sendClueMessage,正向合同场景：发送私有留言,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 MessageRequest。,执行 POST /api/v1/clues/{clueId}/messages，检查数据库副作用（如适用）。,HTTP 201；返回 MessageResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-getMyContactPermission-01,FR-06,getMyContactPermission,正向合同场景：查询自己的授权设置,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/claims/{claimId}/contact-permission，检查数据库副作用（如适用）。,HTTP 200；返回 ContactPermissionResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-setMyContactPermission-01,FR-06,setMyContactPermission,正向合同场景：设置或撤回自己的授权,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 ContactPermissionRequest。,执行 PUT /api/v1/claims/{claimId}/contact-permission，检查数据库副作用（如适用）。,HTTP 200；返回 ContactPermissionResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-getCounterpartyContact-01,FR-06,getCounterpartyContact,正向合同场景：获取对方授权的联系方式,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/claims/{claimId}/counterparty-contact，检查数据库副作用（如适用）。,HTTP 200；返回 CounterpartyContactResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-createClue-01,FR-23,createClue,正向合同场景：提交文字线索,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 ClueRequest。,执行 POST /api/v1/items/{itemId}/clues，检查数据库副作用（如适用）。,HTTP 201；返回 ClueResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-listItemClues-01,FR-25,listItemClues,正向合同场景：查询该寻物信息收到的线索,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/items/{itemId}/clues，检查数据库副作用（如适用）。,HTTP 200；返回 CluePageResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-getClue-01,"FR-23,FR-25",getClue,正向合同场景：查询线索私有详情,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/clues/{clueId}，检查数据库副作用（如适用）。,HTTP 200；返回 ClueDetailResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-resolveLostItem-01,FR-26,resolveLostItem,正向合同场景：标记寻物信息已找回,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 VersionRequest。,执行 POST /api/v1/items/{itemId}/resolve，检查数据库副作用（如适用）。,HTTP 200；返回 ItemRecordResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-listAdminItems-01,FR-20,listAdminItems,正向合同场景：管理员审核列表,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/admin/items，检查数据库副作用（如适用）。,HTTP 200；返回 ItemRecordPageResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-getAdminItem-01,FR-20,getAdminItem,正向合同场景：管理员审核详情,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/admin/items/{itemId}，检查数据库副作用（如适用）。,HTTP 200；返回 ItemRecordResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-approveItem-01,FR-20,approveItem,正向合同场景：审核通过,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 VersionRequest。,执行 POST /api/v1/admin/items/{itemId}/approve，检查数据库副作用（如适用）。,HTTP 200；返回 ItemRecordResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-returnItem-01,FR-20,returnItem,正向合同场景：审核退回,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 ReasonVersionRequest。,执行 POST /api/v1/admin/items/{itemId}/return，检查数据库副作用（如适用）。,HTTP 200；返回 ItemRecordResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-listReviewRecords-01,"FR-20,FR-21",listReviewRecords,正向合同场景：查询审核处置记录,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/admin/items/{itemId}/review-records，检查数据库副作用（如适用）。,HTTP 200；返回 ReviewRecordPageResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-adminTakeDown-01,FR-21,adminTakeDown,正向合同场景：下架违规信息,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 ReasonVersionRequest。,执行 POST /api/v1/admin/items/{itemId}/take-down，检查数据库副作用（如适用）。,HTTP 200；返回 ItemRecordResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-createReport-01,"FR-22,FR-27",createReport,正向合同场景：提交举报,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 ReportRequest。,执行 POST /api/v1/reports，检查数据库副作用（如适用）。,HTTP 201；返回 ReportResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-listMyReports-01,FR-22,listMyReports,正向合同场景：查询我提交的举报,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/me/reports，检查数据库副作用（如适用）。,HTTP 200；返回 ReportPageResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-listAdminReports-01,FR-22,listAdminReports,正向合同场景：管理员举报列表,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/admin/reports，检查数据库副作用（如适用）。,HTTP 200；返回 ReportPageResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-getAdminReport-01,FR-22,getAdminReport,正向合同场景：管理员举报详情,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/admin/reports/{reportId}，检查数据库副作用（如适用）。,HTTP 200；返回 ReportResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-getReportConversation-01,"FR-19,FR-22,FR-24",getReportConversation,正向合同场景：查看举报关联凭证和留言,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 无请求体。,执行 GET /api/v1/admin/reports/{reportId}/conversation，检查数据库副作用（如适用）。,HTTP 200；返回 ReportConversationResponse；数据归属、字段和副作用与接口描述一致。,未执行
+CT-resolveReport-01,FR-22,resolveReport,正向合同场景：处理举报,按接口描述准备有权主体、合法前置状态、有效会话与写请求 CSRF；请求体满足 ResolveReportRequest。,执行 POST /api/v1/admin/reports/{reportId}/resolve，检查数据库副作用（如适用）。,HTTP 200；返回 ReportResponse；数据归属、字段和副作用与接口描述一致。,未执行
+IT-AUTH-01,FR-02,"logout,getMe",退出后旧 Cookie,同一账号已登录,退出后再次携带旧 Cookie GET /me,401 AUTH_REQUIRED,未执行
+IT-AUTH-02,FR-01,register,验证码边界,准备错误、过期、已使用验证码及新学号,分别尝试注册；再用合法验证码提交,错误/过期/重复使用均失败且不建号，合法请求只创建一个账号,未执行
+IT-AUTH-03,FR-01,register,身份与角色越权,普通匿名注册流程,伪造名册组合或增加 role=ADMIN,400，身份不匹配/未知字段拒绝，未创建管理员,未执行
+IT-AUTH-04,SUP-01,createItem,CSRF 防护,持有有效登录 Cookie,缺失或错误 CSRF 令牌发布,403 CSRF_INVALID；没有写入,未执行
+IT-ITEM-01,"FR-07,FR-14","createItem,getPublicItem",审核前不可公开,存在待审核物品及其图片,匿名访问列表、猜测详情和图片 ID,列表无此项，详情和图片 404,未执行
+IT-ITEM-02,FR-10,uploadImage,文件边界,登录用户有正确 CSRF,上传合法 2097152 字节 PNG、超 1 字节图片、伪装 JPG 的其他内容,边界合法图成功；超限 413；伪装格式 415,未执行
+IT-ITEM-03,FR-10,createItem,图片归属与数量,甲乙各有自己的未绑定图片,甲引用乙图片；然后尝试绑定 4 张,拒绝，不能绑定他人图片或超过 3 张,未执行
+IT-ITEM-04,FR-08,editItem,编辑回到待审,本人 PUBLISHED 且无认领/线索历史,合法编辑后匿名查询,物品 PENDING_REVIEW，公共不可见；有业务历史时编辑 409,未执行
+IT-ITEM-05,"FR-11,FR-12,FR-13",listPublicItems,组合筛选与翻页,多种类型/类别/日期及同时间数据,组合筛选、关键词含 %、连续翻页、查无结果,AND 条件、普通字符匹配、稳定排序；每页最多 10；空列表 total=0,未执行
+IT-CLAIM-01,FR-15,createClaim,重复和自认领,有效招领物品,并发重复提交；发布人提交；对 LOST 提交,唯一一条申请；自认领拒绝；LOST 状态/类型冲突,未执行
+IT-CLAIM-02,FR-16,confirmClaim,并发确认不同申请,同物品两个 PENDING 申请,并发确认两条，检查物品与申请,仅一条 CONFIRMED，另一条 CLOSED；不能出现双确认,未执行
+IT-CLAIM-03,"FR-17,FR-18","rejectClaim,completeClaim",非法状态跳转,PENDING 或终态申请,未确认就交接；无原因驳回；重复完成,分别状态冲突/参数错误/冲突，不能重复产生副作用,未执行
+IT-CONTACT-01,FR-06,"setMyContactPermission,getCounterpartyContact",确认前不可授权,申请 PENDING,授权手机号并查询对方资料,均 409 CONTACT_NOT_ACTIVE，不泄露数据,未执行
+IT-CONTACT-02,FR-06,"setMyContactPermission,getCounterpartyContact",字段与对象最小授权,申请 CONFIRMED，双方有效资料,仅授权手机号；对方查询；第三人猜 ID,对方仅收到 phone；email 缺省；第三人 404；公共详情无联系方式,未执行
+IT-CONTACT-03,FR-06,"setMyContactPermission,getCounterpartyContact",撤回与旧页面,已授权手机号并记住旧授权版本,用最新版本撤回，再用旧版本重放授权；对方查询,旧版本写 409 VERSION_CONFLICT；查询 403 CONTACT_NOT_AUTHORIZED,未执行
+IT-CONTACT-04,"FR-06,FR-18","completeClaim,getCounterpartyContact",交接完成后失效,双方已有有效授权,完成交接提交后再用旧 URL/Cookie 查询,409 CONTACT_NOT_ACTIVE；双方授权失效；响应 no-store,未执行
+IT-CONTACT-05,"FR-06,FR-18","setMyContactPermission,completeClaim",授权与完成并发,CONFIRMED 申请及有效版本,并发授权和完成，完成后再次查询,最终 COMPLETED，授权不能被迟到请求重新打开；后续读取失败,未执行
+IT-CONTACT-06,FR-06,"updateProfile,changeEmail",资料变更撤回,已授权手机号/邮箱,修改自己手机号或邮箱,对应字段所有旧授权撤回且版本递增，未获新授权不能读新值,未执行
+IT-MSG-01,"FR-19,FR-24","sendClaimMessage,sendClueMessage",提交后即可留言,刚创建申请或线索,双方发送；同物品其他申请人读取,双方成功；无关用户 404；认领无需先确认,未执行
+IT-MSG-02,"FR-19,FR-24","sendClaimMessage,sendClueMessage",终态留言只读,已驳回/完成/关闭流程,读取历史后尝试发送,历史可查；发送 409 CONVERSATION_CLOSED,未执行
+IT-CLUE-01,FR-23,createClue,线索类型与唯一性,LOST 与 FOUND 各一条,对 FOUND 提交；自提交；并发同人重复提交,前两项失败；同人同 LOST 最多一条,未执行
+IT-CLUE-02,"FR-23,FR-26","createClue,resolveLostItem",找回与线索并发,PUBLISHED LOST,并发标记找回与提交；归档后再提交,事务顺序明确；归档后不能新增；历史线索保留,未执行
+IT-ADMIN-01,FR-20,"approveItem,returnItem",审核权限与原因,待审核物品,学生调用审核；管理员无原因退回；正常通过,学生 403，无原因 400，正常通过后才公开,未执行
+IT-ADMIN-02,"FR-19,FR-22,FR-24","getClaim,listClaimMessages,getReportConversation",举报限定管理员读权限,管理员、待处理关联举报及无关会话,直接读私有会话；通过举报读；处理后再读,直接路径 404；仅待处理关联上下文可读且有审计；处理后 409,未执行
+IT-ADMIN-03,"FR-21,FR-06","adminTakeDown,getCounterpartyContact",违规下架关闭关系,PUBLISHED FOUND，有 CONFIRMED 与有效授权,管理员带原因下架,物品隐藏、申请 CLOSED、授权失效、停止留言，审计完整,未执行
+IT-REPORT-01,"FR-22,FR-27","createReport,resolveReport",举报关联伪造与处置事务,物品、会话和待处理举报,提交他人会话或同时填两个上下文；对已确认申请执行 REJECT_PENDING_CLAIM,非法关联被拒绝；非法处置 409 且举报保持 PENDING，无部分写入,未执行

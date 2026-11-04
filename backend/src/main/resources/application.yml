@@ -1,0 +1,50 @@
+server:
+  port: 8080
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+spring:
+  application:
+    name: campus-lost-and-found
+  profiles:
+    default: dev
+  datasource:
+    url: ${DB_URL:jdbc:mysql://127.0.0.1:3306/campus_lost_found?characterEncoding=UTF-8&connectionTimeZone=UTC}
+    username: ${DB_USERNAME:}
+    password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 10
+      connection-init-sql: "SET time_zone = '+00:00', sql_mode = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'"
+  sql:
+    init:
+      mode: never
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 3MB
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+# app.* 由 AppProperties 绑定并校验；缺少时启动失败，不在源码中设置默认值
+app:
+  storage:
+    upload-dir: ${APP_UPLOAD_DIR:}
+  verification:
+    hmac-key: ${APP_CODE_HMAC_KEY:}
+  mail:
+    mode: ${APP_MAIL_MODE:dev-file}
+    dev-mail-dir: ${APP_DEV_MAIL_DIR:}
+logging:
+  pattern:
+    level: "%5p [%X{requestId:-}]"

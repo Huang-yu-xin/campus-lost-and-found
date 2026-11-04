@@ -1,0 +1,208 @@
+{
+  "status": "passed",
+  "mysqlVersion": "8.0.34",
+  "isolated": true,
+  "existingServiceModified": false,
+  "temporaryDirectory": "C:\\Users\\huangyx\\AppData\\Local\\Temp\\campus-db-validation-aj_7knud",
+  "checks": [
+    {
+      "name": "独立 MySQL 实例可连接",
+      "status": "passed",
+      "detail": "8.0.34"
+    },
+    {
+      "name": "核心迁移成功创建 13 张表",
+      "status": "passed",
+      "detail": ""
+    },
+    {
+      "name": "选做迁移成功，总计 15 张表",
+      "status": "passed",
+      "detail": ""
+    },
+    {
+      "name": "虚拟名册与隔离业务数据可导入",
+      "status": "passed",
+      "detail": ""
+    },
+    {
+      "name": "登录标识防止跨账号歧义",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 1062"
+    },
+    {
+      "name": "名册学号唯一",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 1062"
+    },
+    {
+      "name": "学生身份仅绑定一个账号",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 1062"
+    },
+    {
+      "name": "邮箱忽略大小写判重",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 1062"
+    },
+    {
+      "name": "重复认领受唯一约束",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 1062"
+    },
+    {
+      "name": "认领不能由发布人自己提交",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 3819"
+    },
+    {
+      "name": "申请发布人必须匹配物品",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 1452"
+    },
+    {
+      "name": "重复线索受唯一约束",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 1062"
+    },
+    {
+      "name": "线索不能由发布人自己提交",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 3819"
+    },
+    {
+      "name": "物品状态必须合法",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 3819"
+    },
+    {
+      "name": "退回须有原因",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 3819"
+    },
+    {
+      "name": "认领驳回须有原因",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 3819"
+    },
+    {
+      "name": "图片第四槽位被拒绝",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 3819"
+    },
+    {
+      "name": "图片槽位不可重复",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 1062"
+    },
+    {
+      "name": "绑定图片不能省略槽位",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 3819"
+    },
+    {
+      "name": "不能绑定他人上传图片",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 1452"
+    },
+    {
+      "name": "图片字节上限有效",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 3819"
+    },
+    {
+      "name": "图片类型约束有效",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 3819"
+    },
+    {
+      "name": "选中认领必须属于同一物品",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 1452"
+    },
+    {
+      "name": "授权开关仅允许布尔值",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 3819"
+    },
+    {
+      "name": "举报会话须属于目标物品",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 1452"
+    },
+    {
+      "name": "举报两类上下文互斥",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 3819"
+    },
+    {
+      "name": "举报处理结论不能为空",
+      "status": "passed",
+      "detail": "MySQL 拒绝，错误码 3819"
+    },
+    {
+      "name": "唯一生成列禁止两个已确认认领人",
+      "status": "passed",
+      "detail": ""
+    },
+    {
+      "name": "有效阶段且对方授权时查询可获得一条授权",
+      "status": "passed",
+      "detail": ""
+    },
+    {
+      "name": "交接途中失败全部回滚",
+      "status": "passed",
+      "detail": ""
+    },
+    {
+      "name": "交接完成同时归档与撤回两方授权",
+      "status": "passed",
+      "detail": ""
+    },
+    {
+      "name": "交接完成后授权查询无结果",
+      "status": "passed",
+      "detail": ""
+    },
+    {
+      "name": "即使残留授权开关，业务状态仍阻止读取",
+      "status": "passed",
+      "detail": ""
+    },
+    {
+      "name": "两连接并发确认仅一人成功",
+      "status": "passed",
+      "detail": "['0', '1']"
+    },
+    {
+      "name": "并发后仅一个确认和一个关闭",
+      "status": "passed",
+      "detail": ""
+    },
+    {
+      "name": "线索与归档并发后物品已归档",
+      "status": "passed",
+      "detail": ""
+    },
+    {
+      "name": "归档后的条件插入不新增线索",
+      "status": "passed",
+      "detail": ""
+    },
+    {
+      "name": "真实数据库元数据已生成数据字典",
+      "status": "passed",
+      "detail": ""
+    }
+  ],
+  "tableCount": 15,
+  "limitations": [
+    "仅隔离 MySQL DDL、约束和 SQL 事务样例验证；不是 Spring Boot 后端测试。",
+    "角色权限、会话、验证码真实投递、文件内容、跨表业务类型限制仍由服务实现并测试。",
+    "未进行 100 并发/1 万条数据性能验收。",
+    "未连接、建库或修改原有 MySQL 服务；未创建真实可登录账号。"
+  ],
+  "isolatedServerStopped": true,
+  "passedChecks": 38
+}

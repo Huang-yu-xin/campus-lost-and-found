@@ -1,0 +1,9 @@
+# 本机开发配置：只开启开发期需要的工具，不放任何凭据
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+logging:
+  level:
+    com.campus.lostfound: debug

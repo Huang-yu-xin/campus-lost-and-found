@@ -1,0 +1,21 @@
+# 构建产物
+backend/target/
+frontend/node_modules/
+frontend/dist/
+
+# 本机运行目录：上传图片、开发收件箱（只放虚拟数据，不提交）
+runtime/
+
+# 本机私有配置：数据库密码、验证码密钥
+backend/config/
+
+# 课程原始资料（老师课件、模板及提取文本），只在本机阅读，不放进项目仓库
+课程资料_阅读/
+
+# IDE 与本地配置（IDEA 运行配置里含数据库凭据）
+.idea/
+*.iml
+.vscode/
+*.log
+.env
+.env.*
