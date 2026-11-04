@@ -4,6 +4,5 @@ springdoc:
     enabled: true
   swagger-ui:
     enabled: true
-logging:
-  level:
-    com.campus.lostfound: debug
+# 不要把 com.campus.lostfound 整体调到 debug：MyBatis 会把 SQL 参数（邮箱、手机号、密码哈希）写进日志。
+# 排查某条 SQL 时，只临时打开对应 Mapper，例如 com.campus.lostfound.modules.item.mapper: debug

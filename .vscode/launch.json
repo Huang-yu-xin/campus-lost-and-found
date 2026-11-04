@@ -10,6 +10,24 @@
       // 从 backend 目录启动，才能读到 backend/config/application.yml 里的数据库配置
       "cwd": "${workspaceFolder}/backend",
       "vmArgs": "-Duser.timezone=UTC"
+    },
+    {
+      "type": "node",
+      "name": "启动前端",
+      "request": "launch",
+      // 等同于在 frontend 目录执行 npm run dev；Windows 和 Mac 都能用
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "${workspaceFolder}/frontend",
+      "console": "integratedTerminal"
+    }
+  ],
+  "compounds": [
+    {
+      // 一次启动前后端；停止时两个一起停
+      "name": "启动前后端",
+      "configurations": ["启动后端", "启动前端"],
+      "stopAll": true
     }
   ]
 }

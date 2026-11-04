@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.campus.lostfound.modules.account.mapper.LoginIdentifierMapper">
+
+  <select id="exists" resultType="boolean">
+    SELECT EXISTS (SELECT 1 FROM login_identifiers WHERE identifier = #{identifier})
+  </select>
+
+  <insert id="insert">
+    INSERT INTO login_identifiers (identifier, user_id) VALUES (#{identifier}, #{userId})
+  </insert>
+</mapper>

@@ -14,14 +14,14 @@ export function describeError(error: unknown): string {
     case 400:
       return error.errors[0]?.message ?? error.message
     case 401:
-      return '登录已失效，请重新登录'
+      // 登录时的“账号或密码错误”直接用后端文案；其余 401 都是会话失效
+      return error.code === 'AUTH_REQUIRED' ? '登录已失效，请重新登录' : error.message
     case 404:
       return '内容不存在或无权查看'
     case 409:
       return `${error.message}，请刷新后查看最新状态`
-    case 429:
-      return '操作过于频繁，请稍后再试'
     default:
+      // 429 等由后端给出具体说明，例如“请 15 分钟后再试”
       return error.message
   }
 }

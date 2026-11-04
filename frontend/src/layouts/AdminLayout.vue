@@ -1,7 +1,20 @@
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
+
+import { showError } from '@/api/feedback'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
+const router = useRouter()
+
+async function logout() {
+  try {
+    await auth.logout()
+  } catch (error) {
+    showError(error)
+  }
+  await router.push({ name: 'home' })
+}
 </script>
 
 <template>
@@ -15,6 +28,7 @@ const auth = useAuthStore()
       <div class="sidebar-footer">
         <span>{{ auth.me?.nickname }}</span>
         <RouterLink to="/">返回学生端</RouterLink>
+        <el-button link @click="logout">退出</el-button>
       </div>
     </aside>
     <main class="content">

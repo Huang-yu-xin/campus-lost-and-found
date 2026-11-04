@@ -20,6 +20,7 @@ import com.campus.lostfound.common.error.ErrorCode;
 import com.campus.lostfound.common.web.RequestIdFilter;
 import com.campus.lostfound.config.SecurityConfig;
 import com.campus.lostfound.modules.account.controller.CsrfController;
+import com.campus.lostfound.modules.account.mapper.UserMapper;
 import com.jayway.jsonpath.JsonPath;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -29,6 +30,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -44,6 +46,10 @@ class FrameworkWebTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    /** SecurityConfig 的认证版本过滤器依赖它；本测试用的模拟用户不是账号模块的主体，不会被调用。 */
+    @MockitoBean
+    private UserMapper userMapper;
 
     @Test
     void anonymousCanGetCsrfTokenInSuccessEnvelope() throws Exception {

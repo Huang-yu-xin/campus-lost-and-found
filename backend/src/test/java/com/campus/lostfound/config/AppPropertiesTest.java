@@ -25,7 +25,49 @@ class AppPropertiesTest {
                     AppProperties properties = context.getBean(AppProperties.class);
                     assertThat(properties.mail().mode()).isEqualTo(AppProperties.MailMode.DEV_FILE);
                     assertThat(properties.storage().uploadDir()).isEqualTo("runtime/uploads");
+                    // 未配置时使用确认过的默认限流：5 次失败锁 15 分钟；不配置管理员
+                    assertThat(properties.security().loginMaxFailures()).isEqualTo(5);
+                    assertThat(properties.security().loginLockDuration()).hasMinutes(15);
+                    assertThat(properties.admin() == null || !properties.admin().enabled()).isTrue();
                 });
+    }
+
+    @Test
+    void bindsAdminWithDefaultNickname() {
+        runner.withPropertyValues(validBase("app.admin.account=admin", "app.admin.password=Admin12345",
+                        "app.admin.email=admin@example.com"))
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    AppProperties.Admin admin = context.getBean(AppProperties.class).admin();
+                    assertThat(admin.enabled()).isTrue();
+                    assertThat(admin.nickname()).isEqualTo("管理员");
+                });
+    }
+
+    @Test
+    void adminPasswordMustContainLettersAndDigits() {
+        runner.withPropertyValues(validBase("app.admin.account=admin", "app.admin.password=onlyletters",
+                        "app.admin.email=admin@example.com"))
+                .run(context -> assertThat(context).hasFailed());
+    }
+
+    @Test
+    void adminRequiresEmail() {
+        runner.withPropertyValues(validBase("app.admin.account=admin", "app.admin.password=Admin12345"))
+                .run(context -> assertThat(context).hasFailed());
+    }
+
+    private static String[] validBase(String... extra) {
+        String[] base = {
+                "app.storage.upload-dir=runtime/uploads",
+                "app.verification.hmac-key=" + VALID_KEY,
+                "app.mail.mode=dev-file",
+                "app.mail.dev-mail-dir=runtime/dev-mail",
+        };
+        String[] all = new String[base.length + extra.length];
+        System.arraycopy(base, 0, all, 0, base.length);
+        System.arraycopy(extra, 0, all, base.length, extra.length);
+        return all;
     }
 
     @Test

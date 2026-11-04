@@ -1,8 +1,8 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
-import { getMe } from '@/api/auth'
-import { ApiError } from '@/api/http'
+import { getMe, login as loginApi, logout as logoutApi, type LoginRequest } from '@/api/auth'
+import { ApiError, http } from '@/api/http'
 import type { Me } from '@/types/domain'
 
 /** 当前登录用户。Pinia 只存这类少量共享状态，列表和表单数据放在各自页面里。 */
@@ -40,10 +40,28 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /** 登录成功后旧 CSRF 令牌作废，先取到新令牌再允许后续写请求。 */
+  async function login(request: LoginRequest): Promise<void> {
+    const user = await loginApi(request)
+    await http.refreshCsrfToken()
+    me.value = user
+    loaded.value = true
+  }
+
+  /** 无论退出请求是否成功，本地都清空登录状态；随后换用新的匿名会话令牌。 */
+  async function logout(): Promise<void> {
+    try {
+      await logoutApi()
+    } finally {
+      clear()
+      await http.refreshCsrfToken().catch(() => undefined)
+    }
+  }
+
   /** 退出或会话失效时清空，避免页面继续显示私有数据。 */
   function clear(): void {
     me.value = null
   }
 
-  return { me, loaded, isLoggedIn, isAdmin, reload, ensureLoaded, clear }
+  return { me, loaded, isLoggedIn, isAdmin, reload, ensureLoaded, login, logout, clear }
 })

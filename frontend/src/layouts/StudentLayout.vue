@@ -1,7 +1,20 @@
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
+
+import { showError } from '@/api/feedback'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
+const router = useRouter()
+
+async function logout() {
+  try {
+    await auth.logout()
+  } catch (error) {
+    showError(error)
+  }
+  await router.push({ name: 'home' })
+}
 </script>
 
 <template>
@@ -17,6 +30,7 @@ const auth = useAuthStore()
           <template v-if="auth.isLoggedIn">
             <span class="nickname">{{ auth.me?.nickname }}</span>
             <RouterLink v-if="auth.isAdmin" to="/admin">管理后台</RouterLink>
+            <el-button link @click="logout">退出</el-button>
           </template>
           <RouterLink v-else :to="{ name: 'login' }">
             <el-button type="primary" size="small">登录</el-button>

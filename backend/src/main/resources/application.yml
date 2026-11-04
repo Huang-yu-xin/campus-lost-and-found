@@ -31,6 +31,8 @@ mybatis:
   mapper-locations: classpath:mapper/**/*.xml
   configuration:
     map-underscore-to-camel-case: true
+    # 查询结果按构造参数名映射到 record（编译时已带 -parameters）
+    arg-name-based-constructor-auto-mapping: true
 springdoc:
   api-docs:
     enabled: false
@@ -45,6 +47,14 @@ app:
   mail:
     mode: ${APP_MAIL_MODE:dev-file}
     dev-mail-dir: ${APP_DEV_MAIL_DIR:}
+  security:
+    login-max-failures: 5
+    login-lock-duration: 15m
+  # 预置管理员：账号为空则不创建；在本机 config/application.yml 中配置
+  admin:
+    account: ${APP_ADMIN_ACCOUNT:}
+    password: ${APP_ADMIN_PASSWORD:}
+    email: ${APP_ADMIN_EMAIL:}
 logging:
   pattern:
     level: "%5p [%X{requestId:-}]"

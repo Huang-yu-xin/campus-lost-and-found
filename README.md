@@ -66,10 +66,11 @@ SHOW TABLES;
 
 ### 4. 写本机配置
 
-把 `backend/config/application.yml.example` 复制一份，改名为 `backend/config/application.yml`，然后改两处：
+把 `backend/config/application.yml.example` 复制一份，改名为 `backend/config/application.yml`，然后改三处：
 
-- `password`：第 3 步设的密码
+- `datasource` 下的 `password`：第 3 步设的密码
 - `hmac-key`：在 PowerShell 运行下面这行，把输出的 64 位字符串粘进去
+- `admin` 下的 `password`：自己定一个管理员密码（8 位以上，含字母和数字）。后端第一次启动时自动创建账号 `admin`，用它就能登录管理后台
 
 ```powershell
 $b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); -join ($b | % { $_.ToString('x2') })

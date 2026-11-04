@@ -15,3 +15,9 @@ app:
   mail:
     mode: dev-file
     dev-mail-dir: ../runtime/dev-mail
+  # 本机管理员账号：后端启动时若不存在就自动创建，已存在则不改动（改这里的密码不会重置已建账号）。
+  # 密码 8～64 位，须同时含字母和数字。不需要管理员时删掉这一段即可。
+  admin:
+    account: admin
+    password: '填写管理员密码'
+    email: admin@example.com

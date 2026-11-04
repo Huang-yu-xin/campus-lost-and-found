@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.campus.lostfound.modules.account.mapper.UserMapper">
+
+  <select id="findAuthByIdentifier" resultType="com.campus.lostfound.modules.account.mapper.UserAuthRow">
+    SELECT u.id, u.role, u.password_hash, u.auth_version
+    FROM login_identifiers li
+    JOIN users u ON u.id = li.user_id
+    WHERE li.identifier = #{identifier}
+  </select>
+
+  <select id="findAuthVersion" resultType="long">
+    SELECT auth_version FROM users WHERE id = #{id}
+  </select>
+
+  <select id="findMe" resultType="com.campus.lostfound.modules.account.mapper.MeRow">
+    SELECT u.id, ms.student_no, ms.real_name, ms.campus_card_no,
+           u.nickname, u.email, u.phone, u.role, u.version
+    FROM users u
+    LEFT JOIN mock_students ms ON ms.id = u.student_record_id
+    WHERE u.id = #{id}
+  </select>
+
+  <update id="incrementAuthVersion">
+    UPDATE users SET auth_version = auth_version + 1 WHERE id = #{id}
+  </update>
+
+  <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO users (student_record_id, role, nickname, email, phone, password_hash)
+    VALUES (#{studentRecordId}, #{role}, #{nickname}, #{email}, #{phone}, #{passwordHash})
+  </insert>
+</mapper>
