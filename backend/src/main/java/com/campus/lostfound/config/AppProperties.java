@@ -63,11 +63,18 @@ public record AppProperties(
     public record Storage(@NotBlank(message = "需要通过 APP_UPLOAD_DIR 配置上传目录") String uploadDir) {
     }
 
-    /** 验证码摘要使用的 HMAC 密钥，随机生成，不提交 Git。 */
+    /**
+     * 邮箱验证码。HMAC 密钥随机生成、不提交 Git；keyId 只是密钥版本标识，随记录存库，换密钥时修改。
+     * 有效期、重发间隔与接口合同一致（300 秒、60 秒）；同一个验证码错误达到次数后作废。
+     */
     public record Verification(
             @NotBlank(message = "需要通过 APP_CODE_HMAC_KEY 配置验证码密钥")
             @Size(min = 32, message = "验证码密钥至少 32 个字符")
-            String hmacKey) {
+            String hmacKey,
+            @DefaultValue("k1") @NotBlank @Size(max = 32) String keyId,
+            @DefaultValue("5m") @NotNull Duration codeTtl,
+            @DefaultValue("60s") @NotNull Duration resendInterval,
+            @DefaultValue("5") @Min(1) int maxFailedAttempts) {
     }
 
     public record Mail(@NotNull MailMode mode, String devMailDir) {

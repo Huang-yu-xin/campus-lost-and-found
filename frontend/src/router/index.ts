@@ -22,6 +22,11 @@ const router = createRouter({
       children: [
         { path: '', name: 'home', component: () => import('@/views/HomeView.vue') },
         { path: 'login', name: 'login', component: () => import('@/views/account/LoginView.vue') },
+        {
+          path: 'register',
+          name: 'register',
+          component: () => import('@/views/account/RegisterView.vue'),
+        },
       ],
     },
     {
@@ -55,7 +60,7 @@ router.beforeEach(async (to) => {
   if (to.meta.requiresAuth && !auth.isLoggedIn) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
-  if (to.name === 'login' && auth.isLoggedIn) {
+  if ((to.name === 'login' || to.name === 'register') && auth.isLoggedIn) {
     return { name: 'home' }
   }
   if (to.meta.requiresAdmin && !auth.isAdmin) {

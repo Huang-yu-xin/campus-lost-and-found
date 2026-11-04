@@ -19,4 +19,9 @@ public interface UserMapper {
     int incrementAuthVersion(@Param("id") long id);
 
     void insert(NewUser user);
+
+    boolean existsByStudentRecordId(@Param("studentRecordId") long studentRecordId);
+
+    /** 邮箱列不区分大小写比较，传入规范化后的邮箱。 */
+    boolean existsByEmail(@Param("email") String email);
 }

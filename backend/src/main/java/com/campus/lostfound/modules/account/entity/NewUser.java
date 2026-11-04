@@ -11,6 +11,16 @@ public class NewUser {
     private String phone;
     private String passwordHash;
 
+    public static NewUser student(long studentRecordId, String nickname, String email, String passwordHash) {
+        NewUser user = new NewUser();
+        user.studentRecordId = studentRecordId;
+        user.role = "STUDENT";
+        user.nickname = nickname;
+        user.email = email;
+        user.passwordHash = passwordHash;
+        return user;
+    }
+
     public static NewUser admin(String nickname, String email, String passwordHash) {
         NewUser user = new NewUser();
         user.role = "ADMIN";

@@ -9,8 +9,17 @@
     WHERE li.identifier = #{identifier}
   </select>
 
-  <select id="findAuthVersion" resultType="long">
+  <!-- 认证版本必须每次查库：同一事务里改密后再查，不能读到 MyBatis 会话缓存里的旧值 -->
+  <select id="findAuthVersion" resultType="long" flushCache="true" useCache="false">
     SELECT auth_version FROM users WHERE id = #{id}
+  </select>
+
+  <select id="existsByStudentRecordId" resultType="boolean">
+    SELECT EXISTS (SELECT 1 FROM users WHERE student_record_id = #{studentRecordId})
+  </select>
+
+  <select id="existsByEmail" resultType="boolean">
+    SELECT EXISTS (SELECT 1 FROM users WHERE email = #{email})
   </select>
 
   <select id="findMe" resultType="com.campus.lostfound.modules.account.mapper.MeRow">

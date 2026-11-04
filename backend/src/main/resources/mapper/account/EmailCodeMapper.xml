@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.campus.lostfound.modules.account.mapper.EmailCodeMapper">
+
+  <!-- 加锁读必须每次查库，不能命中 MyBatis 的会话缓存 -->
+  <select id="findForUpdate" resultType="com.campus.lostfound.modules.account.mapper.EmailCodeRow"
+          flushCache="true" useCache="false">
+    SELECT id, code_mac, key_id, sent_at, expires_at, consumed_at, failed_attempts
+    FROM email_verification_codes
+    WHERE purpose = #{purpose} AND email = #{email} AND subject_key = #{subjectKey}
+    FOR UPDATE
+  </select>
+
+  <!-- subject_key 是生成列，不能由应用写入 -->
+  <insert id="insert">
+    INSERT INTO email_verification_codes (purpose, user_id, email, code_mac, key_id, sent_at, expires_at)
+    VALUES (#{purpose}, #{userId}, #{email}, #{codeMac}, #{keyId}, #{sentAt}, #{expiresAt})
+  </insert>
+
+  <update id="resend">
+    UPDATE email_verification_codes
+    SET code_mac = #{codeMac}, key_id = #{keyId}, sent_at = #{sentAt}, expires_at = #{expiresAt},
+        consumed_at = NULL, failed_attempts = 0, version = version + 1
+    WHERE id = #{id}
+  </update>
+
+  <update id="incrementFailedAttempts">
+    UPDATE email_verification_codes SET failed_attempts = failed_attempts + 1 WHERE id = #{id}
+  </update>
+
+  <update id="markConsumed">
+    UPDATE email_verification_codes
+    SET consumed_at = #{consumedAt}, version = version + 1
+    WHERE id = #{id} AND consumed_at IS NULL
+  </update>
+</mapper>

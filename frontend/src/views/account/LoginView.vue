@@ -14,7 +14,11 @@ const route = useRoute()
 const router = useRouter()
 
 const formRef = ref<FormInstance>()
-const form = reactive({ account: '', password: '' })
+// 从注册页跳过来时带上刚注册的学号
+const form = reactive({
+  account: typeof route.query.account === 'string' ? route.query.account : '',
+  password: '',
+})
 const submitting = ref(false)
 const errorMessage = ref('')
 
@@ -81,6 +85,7 @@ async function submit() {
           登录
         </el-button>
       </el-form>
+      <p class="switch">还没有账号？<RouterLink :to="{ name: 'register' }">去注册</RouterLink></p>
     </el-card>
   </section>
 </template>
@@ -109,6 +114,16 @@ h1 {
 .submit {
   width: 100%;
   height: 40px;
+}
+
+.switch {
+  margin: 16px 0 0;
+  text-align: center;
+  color: var(--app-text-secondary);
+}
+
+.switch a {
+  color: var(--el-color-primary);
 }
 
 @media (max-width: 640px) {

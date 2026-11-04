@@ -11,6 +11,33 @@ export interface LoginRequest {
   password: string
 }
 
+export interface CodeSentData {
+  expiresInSeconds: number
+  /** 再次发送前需等待的秒数。 */
+  retryAfterSeconds: number
+}
+
+export interface RegisterRequest {
+  studentId: string
+  realName: string
+  campusCardNo: string
+  email: string
+  emailCode: string
+  password: string
+  /** 可选；不填时后端生成不暴露身份的默认昵称。 */
+  nickname?: string
+}
+
+/** 发送注册验证码（开发环境为模拟发送）；60 秒内重复发送返回 429。 */
+export function sendRegistrationCode(email: string): Promise<CodeSentData> {
+  return http.post<CodeSentData>('/auth/email-codes', { email })
+}
+
+/** 注册成功返回 201 和新账号资料，但不会自动登录。 */
+export function register(request: RegisterRequest): Promise<Me> {
+  return http.post<Me>('/auth/register', request)
+}
+
 export function getCsrf(): Promise<CsrfData> {
   return http.get<CsrfData>('/auth/csrf')
 }
