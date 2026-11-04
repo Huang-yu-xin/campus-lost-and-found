@@ -103,4 +103,4 @@ cd backend
 | `Access denied for user 'lostfound_app'` | application.yml 里的密码和第 3 步设的不一致 |
 | `Unknown database 'campus_lost_found'` | 第 3 步没做完 |
 | 提示 8080 端口被占用 | 后端已经在运行了，先停掉旧的 |
-| 编译报 `release version 21 not supported` | 用的不是 JDK 21 |
+| 编译报 `Fatal error compiling`，后面跟“不支持发行版本 21”（中文系统上可能是乱码） | 当前终端用的不是 JDK 21 |
