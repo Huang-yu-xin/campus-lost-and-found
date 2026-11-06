@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.campus.lostfound.modules.item.mapper.ItemMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO items (publisher_id, type, category, location, occurred_date, title, description, status)
+        VALUES (#{publisherId}, #{request.type}, #{request.category}, #{request.location},
+                #{request.occurredDate}, #{request.title}, #{request.description}, 'PENDING_REVIEW')
+    </insert>
+
+    <sql id="itemColumns">
+        i.id, i.publisher_id, u.nickname, i.type, i.category, i.location, i.occurred_date, i.title,
+        i.description, i.status, i.version, i.review_reason, i.closure_reason,
+        i.published_at, i.created_at, i.updated_at,
+        EXISTS(SELECT 1 FROM claims c WHERE c.id = i.accepted_claim_id AND c.status = 'CONFIRMED')
+            AS has_confirmed_claim
+    </sql>
+
+    <sql id="publishedFilters">
+        i.status = 'PUBLISHED'
+        <if test="search.type != null">AND i.type = #{search.type}</if>
+        <if test="search.category != null">AND i.category = #{search.category}</if>
+        <if test="search.location != null">AND LOCATE(#{search.location}, i.location) &gt; 0</if>
+        <if test="search.keyword != null">
+            AND (LOCATE(#{search.keyword}, i.title) &gt; 0 OR LOCATE(#{search.keyword}, i.description) &gt; 0)
+        </if>
+        <if test="search.dateFrom != null">AND i.occurred_date &gt;= #{search.dateFrom}</if>
+        <if test="search.dateTo != null">AND i.occurred_date &lt;= #{search.dateTo}</if>
+    </sql>
+
+    <select id="findOwn" resultType="com.campus.lostfound.modules.item.mapper.ItemRow">
+        SELECT <include refid="itemColumns"/>
+        FROM items i JOIN users u ON u.id = i.publisher_id
+        WHERE i.id = #{id} AND i.publisher_id = #{publisherId}
+    </select>
+
+    <select id="findPublished" resultType="com.campus.lostfound.modules.item.mapper.ItemRow">
+        SELECT <include refid="itemColumns"/>
+        FROM items i JOIN users u ON u.id = i.publisher_id
+        WHERE i.id = #{id} AND i.status = 'PUBLISHED'
+    </select>
+
+    <select id="countPublished" resultType="long">
+        SELECT COUNT(*) FROM items i WHERE <include refid="publishedFilters"/>
+    </select>
+
+    <select id="listPublished" resultType="com.campus.lostfound.modules.item.mapper.ItemRow">
+        SELECT <include refid="itemColumns"/>
+        FROM items i JOIN users u ON u.id = i.publisher_id
+        WHERE <include refid="publishedFilters"/>
+        ORDER BY i.published_at DESC, i.id DESC
+        LIMIT #{search.pageSize} OFFSET #{offset}
+    </select>
+</mapper>

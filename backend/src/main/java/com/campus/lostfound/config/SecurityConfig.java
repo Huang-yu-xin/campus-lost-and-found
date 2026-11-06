@@ -46,6 +46,7 @@ public class SecurityConfig {
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/api/v1/auth/csrf").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/items", "/api/v1/items/{itemId}").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/email-codes",
                                 "/api/v1/auth/register").permitAll()
                         // springdoc 仅在 dev 配置中开启，其他环境这些路径不存在
