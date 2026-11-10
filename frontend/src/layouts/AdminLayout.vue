@@ -23,7 +23,8 @@ async function logout() {
       <RouterLink to="/admin" class="brand">管理后台</RouterLink>
       <nav class="menu">
         <RouterLink to="/admin">概览</RouterLink>
-        <!-- 管理模块负责人在这里加入口，例如 /admin/items 待审核列表 -->
+        <RouterLink to="/admin/items">物品审核</RouterLink>
+        <RouterLink to="/admin/reports">举报处理</RouterLink>
       </nav>
       <div class="sidebar-footer">
         <span>{{ auth.me?.nickname }}</span>

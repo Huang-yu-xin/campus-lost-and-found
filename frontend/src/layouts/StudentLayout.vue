@@ -24,7 +24,9 @@ async function logout() {
         <RouterLink to="/" class="brand">校园失物招领</RouterLink>
         <nav class="nav">
           <RouterLink to="/">首页</RouterLink>
-          <!-- 各模块负责人在这里加入口，例如 /items、/me/items -->
+          <RouterLink to="/claims">我收到的认领</RouterLink>
+          <RouterLink to="/reports">我的举报</RouterLink>
+          <!-- 各模块负责人在这里加加入口，例如 /items、/me/items -->
         </nav>
         <div class="user-area">
           <template v-if="auth.isLoggedIn">

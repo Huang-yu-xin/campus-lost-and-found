@@ -26,6 +26,11 @@ const router = createRouter({
           name: 'claim-received',
           component: () => import('@/views/claim/ClaimListView.vue'),
         },
+        {
+          path: 'reports',
+          name: 'my-reports',
+          component: () => import('@/views/report/MyReportsView.vue'),
+        },
         // 认领详情：不设 requiresAuth，未登录时由页面自行提示（后端仍会返回 401）
         {
           path: 'claims/:claimId',
@@ -49,6 +54,11 @@ const router = createRouter({
           path: 'items',
           name: 'admin-items',
           component: () => import('@/views/admin/AdminItemsView.vue'),
+        },
+        {
+          path: 'reports',
+          name: 'admin-reports',
+          component: () => import('@/views/admin/AdminReportsView.vue'),
         },
       ],
     },
