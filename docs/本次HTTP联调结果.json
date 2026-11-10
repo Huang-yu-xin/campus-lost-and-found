@@ -1,0 +1,51 @@
+{
+  "time": "2026-11-10T22:34:42.082400+08:00",
+  "scope": "本机5174代理至8082和隔离3309数据库；未访问公网部署",
+  "checks": [
+    {
+      "name": "线索ID以字符串返回",
+      "passed": true
+    },
+    {
+      "name": "无关用户和无举报上下文管理员不可读取线索",
+      "passed": true
+    },
+    {
+      "name": "线索留言跨页完整且顺序正确",
+      "passed": true
+    },
+    {
+      "name": "提供与收到的线索均有个人入口",
+      "passed": true
+    },
+    {
+      "name": "举报关联线索会话可分页读取",
+      "passed": true
+    },
+    {
+      "name": "找回原子归档并增加版本",
+      "passed": true
+    },
+    {
+      "name": "归档会话只读且双方历史仍可访问",
+      "passed": true
+    },
+    {
+      "name": "我申请的与收到的认领入口可查询",
+      "passed": true
+    },
+    {
+      "name": "itemId筛选不能扩大他人认领列表权限",
+      "passed": true
+    },
+    {
+      "name": "管理员可找到已发布的信息",
+      "passed": true
+    },
+    {
+      "name": "直接下架同步关闭认领",
+      "passed": true
+    }
+  ],
+  "requestCount": 52
+}
