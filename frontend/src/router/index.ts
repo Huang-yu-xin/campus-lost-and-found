@@ -21,17 +21,6 @@ const router = createRouter({
       component: StudentLayout,
       children: [
         { path: '', name: 'home', component: () => import('@/views/HomeView.vue') },
-        {
-          path: 'claims',
-          name: 'claim-received',
-          component: () => import('@/views/claim/ClaimListView.vue'),
-        },
-        // 认领详情：不设 requiresAuth，未登录时由页面自行提示（后端仍会返回 401）
-        {
-          path: 'claims/:claimId',
-          name: 'claim-detail',
-          component: () => import('@/views/claim/ClaimDetailView.vue'),
-        },
         { path: 'login', name: 'login', component: () => import('@/views/account/LoginView.vue') },
         {
           path: 'register',
@@ -55,11 +44,6 @@ const router = createRouter({
           path: '',
           name: 'admin-home',
           component: () => import('@/views/admin/AdminHomeView.vue'),
-        },
-        {
-          path: 'items',
-          name: 'admin-items',
-          component: () => import('@/views/admin/AdminItemsView.vue'),
         },
       ],
     },

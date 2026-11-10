@@ -34,19 +34,6 @@ onMounted(checkBackend)
     <p class="subtitle">基础框架已就绪，业务页面开发中。</p>
 
     <el-card shadow="never" class="status-card">
-      <template #header>我的功能（认领与管理）</template>
-      <div class="entries">
-        <el-button type="primary" @click="$router.push('/claims')">我收到的认领申请</el-button>
-        <el-button v-if="auth.isAdmin" @click="$router.push('/admin/items')">信息审核（管理员）</el-button>
-      </div>
-      <p class="login-state">
-        未登录时请先打开
-        <code>/api/v1/dev/login?userId=1</code>（学生）或
-        <code>?userId=2</code>（管理员），再回到本页。
-      </p>
-    </el-card>
-
-    <el-card shadow="never" class="status-card">
       <template #header>系统连通性</template>
       <el-result
         v-if="backendState !== 'checking'"
@@ -85,12 +72,5 @@ onMounted(checkBackend)
 .login-state {
   text-align: center;
   color: var(--app-text-secondary);
-}
-
-.entries {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 10px;
 }
 </style>

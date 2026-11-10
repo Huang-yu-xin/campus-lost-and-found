@@ -1,4 +1,4 @@
-﻿# 本机开发配置：只开启开发期需要的工具，不放任何凭据
+# 本机开发配置：只开启开发期需要的工具，不放任何凭据
 springdoc:
   api-docs:
     enabled: true
@@ -6,7 +6,3 @@ springdoc:
     enabled: true
 # 不要把 com.campus.lostfound 整体调到 debug：MyBatis 会把 SQL 参数（邮箱、手机号、密码哈希）写进日志。
 # 排查某条 SQL 时，只临时打开对应 Mapper，例如 com.campus.lostfound.modules.item.mapper: debug
-
-app:
-  # 临时：开发期登录开关；成员甲的 /auth/login 完成后删除本项与 modules/dev 包
-  dev-login-enabled: true
