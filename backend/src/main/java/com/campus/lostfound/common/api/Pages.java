@@ -27,6 +27,10 @@ public final class Pages {
     }
 
     public static int offset(int page, int pageSize) {
-        return (page - 1) * pageSize;
+        long offset = (long) (page(page) - 1) * pageSize(pageSize);
+        if (offset > Integer.MAX_VALUE) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "页码超出可查询范围");
+        }
+        return (int) offset;
     }
 }

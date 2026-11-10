@@ -26,6 +26,22 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ClaimService {
 
+    @Transactional(readOnly = true)
+    public com.campus.lostfound.common.api.PageData<ClaimView> personal(
+            long userId, boolean received, String status, Long itemId, int page, int pageSize) {
+        com.campus.lostfound.common.api.Pages.page(page);
+        com.campus.lostfound.common.api.Pages.pageSize(pageSize);
+        if ((status != null && !java.util.Set.of("PENDING", "CONFIRMED", "REJECTED", "COMPLETED", "CLOSED").contains(status))
+                || (itemId != null && itemId <= 0)) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR);
+        }
+        var rows = mapper.personalRows(userId, received, status, itemId, pageSize,
+                com.campus.lostfound.common.api.Pages.offset(page, pageSize));
+        return new com.campus.lostfound.common.api.PageData<>(
+                rows.stream().map(ClaimService::toView).toList(), page, pageSize,
+                mapper.countPersonal(userId, received, status, itemId));
+    }
+
     private final ClaimMapper mapper;
     private final ContactPermissionService contactPermissionService;
     private final ItemStateLocks stateLocks;

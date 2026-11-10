@@ -30,6 +30,7 @@ async function logout() {
             >我的发布</RouterLink
           >
           <template v-if="auth.isLoggedIn && !auth.isAdmin">
+            <RouterLink :to="{ name: 'my-claims' }">我申请的认领</RouterLink>
             <RouterLink :to="{ name: 'claim-received' }">我收到的认领</RouterLink>
             <RouterLink :to="{ name: 'my-reports' }">我的举报</RouterLink>
           </template>

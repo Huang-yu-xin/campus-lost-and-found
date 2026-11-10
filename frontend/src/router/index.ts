@@ -46,6 +46,12 @@ const router = createRouter({
           component: () => import('@/views/item/ItemDetailView.vue'),
         },
         {
+          path: 'me/claims',
+          name: 'my-claims',
+          component: () => import('@/views/claim/ClaimListView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
           path: 'claims',
           name: 'claim-received',
           component: () => import('@/views/claim/ClaimListView.vue'),

@@ -56,6 +56,25 @@ public class ClaimController {
     }
 
     /** 认领私有详情：仅申请人与发布人可见。 */
+    @GetMapping("/me/claims")
+    public ApiResponse<PageData<ClaimView>> mine(Authentication authentication,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(required = false) String status) {
+        return ApiResponse.ok(claimService.personal(currentUserId(authentication), false,
+                status, null, page, pageSize));
+    }
+
+    @GetMapping("/me/received-claims")
+    public ApiResponse<PageData<ClaimView>> receivedPage(Authentication authentication,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long itemId) {
+        return ApiResponse.ok(claimService.personal(currentUserId(authentication), true,
+                status, itemId, page, pageSize));
+    }
+
     @GetMapping("/claims/{claimId}")
     public ApiResponse<ClaimDetailView> detail(@PathVariable("claimId") long claimId,
                                                Authentication authentication) {

@@ -64,6 +64,29 @@ class AbcWorkflowIntegrationTest {
         admin = actor(false, adminSession);
     }
 
+    @Test void personalClaimsArePagedFilteredAndCannotEscapeOwnership() throws Exception {
+        String item = publish();
+        approve(item);
+        long first = apply(applicantSession, item);
+        long second = apply(otherSession, item);
+        mvc.perform(get("/api/v1/me/claims").session(applicantSession))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[0].id").value(first));
+        mvc.perform(get("/api/v1/me/received-claims").param("pageSize", "1").session(ownerSession))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(2))
+                .andExpect(jsonPath("$.data.items[0].id").value(second));
+        mvc.perform(get("/api/v1/me/received-claims").param("pageSize", "1").param("page", "2").session(ownerSession))
+                .andExpect(jsonPath("$.data.items[0].id").value(first));
+        mvc.perform(get("/api/v1/me/received-claims").param("itemId", item).session(otherSession))
+                .andExpect(jsonPath("$.data.total").value(0));
+        mvc.perform(get("/api/v1/me/claims").param("status", "REJECTED").session(applicantSession))
+                .andExpect(jsonPath("$.data.total").value(0));
+        mvc.perform(get("/api/v1/me/claims").param("status", "INVALID").session(applicantSession))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/v1/me/claims").param("page", "2147483647").session(applicantSession))
+                .andExpect(status().isBadRequest());
+    }
+
     @Test void publicationClaimContactChangeAndHandoverStayConsistent() throws Exception {
         String item = publish();
         approve(item).andExpect(jsonPath("$.data.version").value(2));

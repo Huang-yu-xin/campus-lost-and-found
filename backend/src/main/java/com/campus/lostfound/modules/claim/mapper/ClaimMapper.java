@@ -12,6 +12,23 @@ import org.apache.ibatis.annotations.Update;
 @Mapper
 public interface ClaimMapper {
 
+    String PERSONAL_FILTER = " FROM claims c JOIN users ua ON ua.id=c.applicant_id "
+            + "JOIN users up ON up.id=c.publisher_id WHERE "
+            + "((#{received}=TRUE AND c.publisher_id=#{userId}) OR "
+            + "(#{received}=FALSE AND c.applicant_id=#{userId})) "
+            + "AND (#{status} IS NULL OR c.status=#{status}) "
+            + "AND (#{itemId} IS NULL OR c.item_id=#{itemId})";
+
+    @Select("SELECT COUNT(*)" + PERSONAL_FILTER)
+    long countPersonal(@Param("userId") long userId, @Param("received") boolean received,
+            @Param("status") String status, @Param("itemId") Long itemId);
+
+    @Select("SELECT c.*, ua.nickname AS applicant_nickname, up.nickname AS publisher_nickname" + PERSONAL_FILTER
+            + " ORDER BY c.created_at DESC,c.id DESC LIMIT #{limit} OFFSET #{offset}")
+    java.util.List<Map<String, Object>> personalRows(@Param("userId") long userId,
+            @Param("received") boolean received, @Param("status") String status,
+            @Param("itemId") Long itemId, @Param("limit") int limit, @Param("offset") int offset);
+
     @Select("SELECT id, publisher_id, type, status, accepted_claim_id "
             + "FROM items WHERE id = #{itemId}")
     Map<String, Object> findItem(@Param("itemId") long itemId);

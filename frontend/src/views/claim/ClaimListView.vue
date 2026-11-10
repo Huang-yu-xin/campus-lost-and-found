@@ -1,23 +1,18 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import type { Claim } from '@/api/claim'
 
 import { describeError } from '@/api/feedback'
 import { http } from '@/api/http'
 
-interface ReceivedClaim {
-  id: number
-  itemId: number
-  itemTitle: string
-  itemStatus: string
-  applicantNickname: string
-  status: string
-  reason: string | null
-  createdAt: string
-}
-
 const router = useRouter()
-const rows = ref<ReceivedClaim[]>([])
+const route = useRoute()
+const mine = computed(() => route.name === 'my-claims')
+const rows = ref<Claim[]>([])
+const page = ref(1)
+const total = ref(0)
+const filter = ref('')
 const loading = ref(true)
 const errorText = ref('')
 
@@ -40,7 +35,12 @@ async function load() {
   loading.value = true
   errorText.value = ''
   try {
-    rows.value = await http.get<ReceivedClaim[]>('/claims/received')
+    const data = await http.get<{ items: Claim[]; total: number }>(
+      mine.value ? '/me/claims' : '/me/received-claims',
+      { params: { page: page.value, pageSize: 10, status: filter.value || undefined } },
+    )
+    rows.value = data.items
+    total.value = data.total
   } catch (error) {
     errorText.value = describeError(error)
   } finally {
@@ -48,15 +48,30 @@ async function load() {
   }
 }
 
-onMounted(load)
+watch(
+  [mine, filter],
+  () => {
+    page.value = 1
+    void load()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
   <section class="claim-list">
     <div class="head">
-      <h1>我收到的认领申请</h1>
+      <h1>{{ mine ? '我申请的认领' : '我收到的认领申请' }}</h1>
       <el-button @click="load">刷新</el-button>
     </div>
+    <el-select
+      v-model="filter"
+      placeholder="全部状态"
+      clearable
+      style="width: 180px; margin-bottom: 16px"
+    >
+      <el-option v-for="(text, value) in statusText" :key="value" :value="value" :label="text" />
+    </el-select>
 
     <el-alert v-if="errorText" :title="errorText" type="warning" :closable="false" show-icon>
       <p class="hint">请确认登录状态后重新加载。</p>
@@ -64,11 +79,16 @@ onMounted(load)
 
     <el-skeleton v-else-if="loading" :rows="5" animated />
 
-    <el-empty v-else-if="rows.length === 0" description="还没有人申请认领你发布的信息" />
+    <el-empty v-else-if="rows.length === 0" description="暂无符合条件的认领申请" />
 
     <el-table v-else :data="rows" border style="width: 100%">
-      <el-table-column prop="itemTitle" label="物品" min-width="180" />
-      <el-table-column prop="applicantNickname" label="申请人" width="120" />
+      <el-table-column prop="itemId" label="物品编号" min-width="120" />
+      <el-table-column
+        :prop="mine ? 'publisher.nickname' : 'applicant.nickname'"
+        :label="mine ? '发布人' : '申请人'"
+        width="120"
+      />
+      <el-table-column prop="description" label="特征说明" min-width="180" show-overflow-tooltip />
       <el-table-column label="状态" width="110">
         <template #default="{ row }">
           <el-tag :type="tagType(row.status)">{{ statusText[row.status] ?? row.status }}</el-tag>
@@ -83,6 +103,14 @@ onMounted(load)
         </template>
       </el-table-column>
     </el-table>
+    <el-pagination
+      v-if="total > 0"
+      v-model:current-page="page"
+      :page-size="10"
+      :total="total"
+      layout="prev, pager, next, total"
+      @current-change="load"
+    />
   </section>
 </template>
 
