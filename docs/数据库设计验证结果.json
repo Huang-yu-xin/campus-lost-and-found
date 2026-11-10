@@ -3,7 +3,7 @@
   "mysqlVersion": "8.0.34",
   "isolated": true,
   "existingServiceModified": false,
-  "temporaryDirectory": "C:\\Users\\huangyx\\AppData\\Local\\Temp\\campus-db-validation-aj_7knud",
+  "temporaryDirectory": "C:\\Users\\huangyx\\AppData\\Local\\Temp\\campus-db-validation-t50jxf1x",
   "checks": [
     {
       "name": "独立 MySQL 实例可连接",
@@ -17,6 +17,11 @@
     },
     {
       "name": "选做迁移成功，总计 15 张表",
+      "status": "passed",
+      "detail": ""
+    },
+    {
+      "name": "发布防重与图片清理迁移成功，总计 16 张表",
       "status": "passed",
       "detail": ""
     },
@@ -196,7 +201,7 @@
       "detail": ""
     }
   ],
-  "tableCount": 15,
+  "tableCount": 16,
   "limitations": [
     "仅隔离 MySQL DDL、约束和 SQL 事务样例验证；不是 Spring Boot 后端测试。",
     "角色权限、会话、验证码真实投递、文件内容、跨表业务类型限制仍由服务实现并测试。",
@@ -204,5 +209,5 @@
     "未连接、建库或修改原有 MySQL 服务；未创建真实可登录账号。"
   ],
   "isolatedServerStopped": true,
-  "passedChecks": 38
+  "passedChecks": 39
 }

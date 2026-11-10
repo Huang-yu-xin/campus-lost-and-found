@@ -149,6 +149,7 @@ USE campus_lost_found;
 SOURCE database/migrations/V001__core_schema.sql;
 SOURCE database/migrations/V002__optional_reports.sql;
 SOURCE database/migrations/V003__item_submission_key.sql;
+SOURCE database/migrations/V004__image_cleanup_jobs.sql;
 SOURCE database/seeds/S001__mock_students.sql;
 
 CREATE USER 'lostfound_app'@'localhost' IDENTIFIED BY '你的密码';
@@ -159,7 +160,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON campus_lost_found.* TO 'lostfound_app'@'
 SHOW TABLES;
 ```
 
-最后应看到 15 张表：13 张核心表和举报功能的 2 张表。已有项目库只补执行尚未执行的迁移，不重复建库或导入名册；原来只执行 V001/V003 的库，使用举报功能前还需补执行 V002。中途任何一步报错就停下来，不要重复执行。`lostfound_app` 是后端专用账号，只能读写数据，不能改表结构；表结构要改时写新的迁移文件，详见 [迁移说明](database/README.md)。
+最后应看到 16 张表：13 张核心表、举报功能的 2 张表和图片清理任务表。已有项目库只补执行尚未执行的迁移，不重复建库或导入名册；更新后端前须执行 V004，使用举报功能还需 V002。中途任何一步报错就停下来，不要重复执行。`lostfound_app` 是后端专用账号，只能读写数据，不能改表结构；表结构要改时写新的迁移文件，详见 [迁移说明](database/README.md)。
 
 ### 4. 写本机配置
 

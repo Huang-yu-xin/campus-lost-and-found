@@ -83,6 +83,9 @@ def main():
         check('核心迁移成功创建 13 张表',run("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE();")=='13')
         run((ROOT/'migrations/V002__optional_reports.sql').read_text(encoding='utf-8'))
         check('选做迁移成功，总计 15 张表',run("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE();")=='15')
+        run((ROOT/'migrations/V003__item_submission_key.sql').read_text(encoding='utf-8'))
+        run((ROOT/'migrations/V004__image_cleanup_jobs.sql').read_text(encoding='utf-8'))
+        check('发布防重与图片清理迁移成功，总计 16 张表',run("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE();")=='16')
         run((ROOT/'seeds/S001__mock_students.sql').read_text(encoding='utf-8'))
         run((ROOT/'tests/fixtures.sql').read_text(encoding='utf-8'))
         check('虚拟名册与隔离业务数据可导入',run('SELECT COUNT(*) FROM mock_students;')=='5')
@@ -202,9 +205,9 @@ def main():
                 for _,name,col,parent,pcol in related:lines.append(f'- `{name}`：`{col}` → `{parent}.{pcol}`。')
             lines+=['']
         (DOCS/'数据库字段字典.md').write_text('\n'.join(lines),encoding='utf-8')
-        check('真实数据库元数据已生成数据字典',len(metadata['tables'])==15)
+        check('真实数据库元数据已生成数据字典',len(metadata['tables'])==16)
         report['status']='passed'
-        report['tableCount']=15
+        report['tableCount']=16
         report['limitations']=['仅隔离 MySQL DDL、约束和 SQL 事务样例验证；不是 Spring Boot 后端测试。','角色权限、会话、验证码真实投递、文件内容、跨表业务类型限制仍由服务实现并测试。','未进行 100 并发/1 万条数据性能验收。','未连接、建库或修改原有 MySQL 服务；未创建真实可登录账号。']
     except Exception as exc:
         report['error']=str(exc)

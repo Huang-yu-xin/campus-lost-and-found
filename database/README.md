@@ -8,7 +8,8 @@
 2. `migrations/V001__core_schema.sql`：核心 13 张表。
 3. `migrations/V002__optional_reports.sql`：举报的 2 张表。甲乙丙合并版本已接入举报功能，本地完整运行需要执行。
 4. `migrations/V003__item_submission_key.sql`：发布防重，已有开发库也需要执行一次。只依赖 V001。
-5. `seeds/S001__mock_students.sql`：仅虚拟名册，不创建账号。
+5. `migrations/V004__image_cleanup_jobs.sql`：图片清理队列及过期查询索引，更新应用前执行一次。
+6. `seeds/S001__mock_students.sql`：仅虚拟名册，不创建账号。
 
 初始化脚本用于空项目库，各迁移只执行一次。已执行 V001 的库可单独运行尚未执行的 V003。脚本不含 DROP/TRUNCATE，也不关闭外键检查。执行出错时停下核对，MySQL DDL 会隐式提交。
 
@@ -27,6 +28,7 @@ SOURCE database/migrations/V001__core_schema.sql;
 -- 合并版本的举报功能需要这两张表：
 SOURCE database/migrations/V002__optional_reports.sql;
 SOURCE database/migrations/V003__item_submission_key.sql;
+SOURCE database/migrations/V004__image_cleanup_jobs.sql;
 SOURCE database/seeds/S001__mock_students.sql;
 ```
 
@@ -49,6 +51,10 @@ python database/tools/validate_database.py --mysql-home D:/MySQL/mysql-8.0.34-wi
 `tests/fixtures.sql` 只能用于隔离验证，密码字段是不能登录的占位内容，不要导入正式开发账号库。没有任何真实个人资料。
 
 ## 开发统一约定
+
+图片清理默认每小时运行，启动一分钟后首次执行。仅清理上传超过 24 小时且未绑定物品的图片，每轮最多 100 条；已绑定图片（包括历史物品图片）保留。`app.storage.cleanup-enabled: false` 可关闭定时任务，`app.storage.unbound-retention-hours` 可调整保留时长（1～8760 小时）。任务先提交解除引用及清理队列，再删除文件；删除失败或进程重启后会重试。
+
+`image_cleanup_jobs` 字段：`storage_key` 为图片文件名、ASCII 字符串、主键；`created_at` 为 UTC 入队时间（DATETIME(6)）。仅服务端生成的 UUID 图片名允许删除，不接收客户端路径。
 
 - 连接使用 UTF-8、UTC 和严格 SQL 模式，不能靠非严格模式截断超长输入。
 - 时间按 UTC 存储，业务发生日期按北京时间判断；私有数据查询必须带归属条件。
