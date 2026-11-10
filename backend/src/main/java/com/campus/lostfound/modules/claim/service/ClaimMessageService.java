@@ -101,11 +101,12 @@ public class ClaimMessageService {
         return claim;
     }
 
-    private static MessageView toView(Map<String, Object> row) {
+    /** 认领会话与举报受限读取共用同一留言视图。 */
+    public static MessageView toView(Map<String, Object> row) {
         return new MessageView(
-                Rows.num(row, "id"),
-                new UserBrief(Rows.num(row, "sender_id"), Rows.str(row, "sender_nickname")),
+                Rows.id(row, "id"),
+                new UserBrief(Rows.id(row, "sender_id"), Rows.str(row, "sender_nickname")),
                 Rows.str(row, "content"),
-                Rows.time(row, "created_at"));
+                Rows.instant(row, "created_at"));
     }
 }

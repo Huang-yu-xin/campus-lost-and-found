@@ -10,6 +10,7 @@ import {
   resolveReport,
 } from '@/api/reports'
 import type { Report, ReportAction, ReportConversation, ReportStatus } from '@/api/reports'
+import { formatTime } from '@/utils/time'
 
 const status = ref<ReportStatus>('PENDING')
 const rows = ref<Report[]>([])
@@ -28,7 +29,7 @@ const conversation = ref<ReportConversation | null>(null)
 const conversationLoading = ref(false)
 const conversationError = ref('')
 const conversationPage = ref(1)
-const conversationReportId = ref<number>()
+const conversationReportId = ref<string>()
 
 const resolveVisible = ref(false)
 const resolving = ref(false)
@@ -42,12 +43,6 @@ const actionText: Record<string, string> = {
   KEEP: '维持现状',
   TAKE_DOWN: '违规下架',
   REJECT_PENDING_CLAIM: '驳回关联申请',
-}
-
-function formatTime(value: string | null): string {
-  if (!value) return '—'
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', { hour12: false })
 }
 
 async function load() {

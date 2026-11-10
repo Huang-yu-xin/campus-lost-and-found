@@ -55,6 +55,25 @@
         WHERE i.id = #{id} AND i.status = 'PUBLISHED'
     </select>
 
+    <select id="findById" resultType="com.campus.lostfound.modules.item.mapper.ItemRow">
+        SELECT <include refid="itemColumns"/>
+        FROM items i JOIN users u ON u.id = i.publisher_id
+        WHERE i.id = #{id}
+    </select>
+
+    <select id="countByStatus" resultType="long">
+        SELECT COUNT(*) FROM items WHERE status = #{status}
+    </select>
+
+    <!-- 管理端按提交先后处理，先提交的排在前面 -->
+    <select id="listByStatus" resultType="com.campus.lostfound.modules.item.mapper.ItemRow">
+        SELECT <include refid="itemColumns"/>
+        FROM items i JOIN users u ON u.id = i.publisher_id
+        WHERE i.status = #{status}
+        ORDER BY i.created_at ASC, i.id ASC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
     <select id="countPublished" resultType="long">
         SELECT COUNT(*) FROM items i WHERE <include refid="publishedFilters"/>
     </select>

@@ -4,6 +4,7 @@ import { onMounted, ref } from 'vue'
 import { describeError } from '@/api/feedback'
 import { listMyReports } from '@/api/reports'
 import type { Report } from '@/api/reports'
+import { formatTime } from '@/utils/time'
 
 const rows = ref<Report[]>([])
 const total = ref(0)
@@ -21,12 +22,6 @@ const actionText: Record<string, string> = {
   KEEP: '维持现状',
   TAKE_DOWN: '违规下架',
   REJECT_PENDING_CLAIM: '驳回关联申请',
-}
-
-function formatTime(value: string | null): string {
-  if (!value) return '—'
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', { hour12: false })
 }
 
 async function load() {

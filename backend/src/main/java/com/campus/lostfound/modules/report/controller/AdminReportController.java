@@ -2,10 +2,10 @@ package com.campus.lostfound.modules.report.controller;
 
 import com.campus.lostfound.common.api.ApiResponse;
 import com.campus.lostfound.common.api.PageData;
+import com.campus.lostfound.modules.report.dto.ReportDtos.ReportConversation;
 import com.campus.lostfound.modules.report.dto.ReportDtos.ReportView;
 import com.campus.lostfound.modules.report.dto.ReportDtos.ResolveReportRequest;
 import com.campus.lostfound.modules.report.service.ReportService;
-import java.util.Map;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,7 +42,7 @@ public class AdminReportController {
     }
 
     @GetMapping("/{reportId}/conversation")
-    public ApiResponse<Map<String, Object>> conversation(
+    public ApiResponse<ReportConversation> conversation(
             @PathVariable("reportId") long reportId,
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,

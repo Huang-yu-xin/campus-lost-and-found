@@ -1,50 +1,58 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
+import {
+  approveItem,
+  getAdminItem,
+  listAdminItems,
+  listReviewRecords,
+  returnItem as returnAdminItem,
+  takeDownItem,
+  type AdminItemStatus,
+  type ReviewRecord,
+} from '@/api/admin'
 import { describeError } from '@/api/feedback'
-import { http } from '@/api/http'
+import type { ItemRecord } from '@/api/items'
+import { formatTime } from '@/utils/time'
 
-interface AdminItem {
-  id: number
-  title: string
-  type: string
-  category: string
-  location: string
-  status: string
-  version: number
-  reviewReason: string | null
-  publisherNickname: string
-  createdAt: string
-}
+const STATUSES: AdminItemStatus[] = ['PENDING_REVIEW', 'RETURNED', 'PUBLISHED']
+const PAGE_SIZE = 10
 
-interface AdminItemDetail {
-  id: number
-  title: string
-  description: string
-  location: string
-  status: string
-  images: { id: string; url: string }[]
-  reviewRecords: { id: number; action: string; reason: string | null; operator_nickname: string }[]
-}
+const route = useRoute()
+const initialStatus = STATUSES.find((value) => value === route.query.status) ?? 'PENDING_REVIEW'
 
-const rows = ref<AdminItem[]>([])
+const rows = ref<ItemRecord[]>([])
+const page = ref(1)
+const total = ref(0)
 const loading = ref(true)
-const actingId = ref<number | null>(null)
+const actingId = ref<string | null>(null)
 const errorText = ref('')
-const status = ref<'PENDING_REVIEW' | 'RETURNED' | 'PUBLISHED'>('PENDING_REVIEW')
+const status = ref<AdminItemStatus>(initialStatus)
 const detailVisible = ref(false)
 const detailLoading = ref(false)
-const selectedItem = ref<AdminItemDetail | null>(null)
+const selectedItem = ref<ItemRecord | null>(null)
+const records = ref<ReviewRecord[]>([])
+const recordPage = ref(1)
+const recordTotal = ref(0)
 const detailError = ref('')
 
 const typeText: Record<string, string> = { LOST: '寻物', FOUND: '招领' }
+const actionText: Record<string, string> = { APPROVE: '通过', RETURN: '退回', TAKE_DOWN: '下架' }
 
 async function load() {
   loading.value = true
   errorText.value = ''
   try {
-    rows.value = await http.get<AdminItem[]>(`/admin/items?status=${status.value}`)
+    const result = await listAdminItems(status.value, page.value, PAGE_SIZE)
+    // 处理完末页最后一条后退回上一页，避免停在空页
+    if (result.items.length === 0 && result.total > 0 && page.value > 1) {
+      page.value = Math.ceil(result.total / PAGE_SIZE)
+      return await load()
+    }
+    rows.value = result.items
+    total.value = result.total
   } catch (error) {
     errorText.value = describeError(error)
   } finally {
@@ -52,11 +60,16 @@ async function load() {
   }
 }
 
+function switchStatus() {
+  page.value = 1
+  void load()
+}
+
 async function approve(rawRow: unknown) {
-  const row = rawRow as AdminItem
+  const row = rawRow as ItemRecord
   actingId.value = row.id
   try {
-    await http.post(`/admin/items/${row.id}/approve`, { expectedVersion: row.version })
+    await approveItem(row.id, row.version)
     ElMessage.success('已通过，信息进入公共列表')
     await load()
   } catch (error) {
@@ -67,16 +80,13 @@ async function approve(rawRow: unknown) {
 }
 
 async function returnItem(rawRow: unknown) {
-  const row = rawRow as AdminItem
+  const row = rawRow as ItemRecord
   actingId.value = row.id
   try {
     const { value } = await ElMessageBox.prompt('请填写退回原因（发布者可见，必填）', '退回修改', {
       inputValidator: (v: string) => (v && v.trim().length > 0 ? true : '退回原因必填'),
     })
-    await http.post(`/admin/items/${row.id}/return`, {
-      expectedVersion: row.version,
-      reason: value.trim(),
-    })
+    await returnAdminItem(row.id, row.version, value.trim())
     ElMessage.success('已退回，发布者可修改后重新提交')
     await load()
   } catch (error) {
@@ -87,13 +97,16 @@ async function returnItem(rawRow: unknown) {
 }
 
 async function showDetail(rawRow: unknown) {
-  const row = rawRow as AdminItem
+  const row = rawRow as ItemRecord
   detailVisible.value = true
   detailLoading.value = true
   selectedItem.value = null
+  records.value = []
+  recordPage.value = 1
   detailError.value = ''
   try {
-    selectedItem.value = await http.get<AdminItemDetail>(`/admin/items/${row.id}`)
+    const [item] = await Promise.all([getAdminItem(row.id), loadRecords(row.id)])
+    selectedItem.value = item
   } catch (error) {
     detailError.value = describeError(error)
   } finally {
@@ -101,9 +114,24 @@ async function showDetail(rawRow: unknown) {
   }
 }
 
+async function loadRecords(itemId = selectedItem.value?.id) {
+  if (!itemId) return
+  const result = await listReviewRecords(itemId, recordPage.value, PAGE_SIZE)
+  records.value = result.items
+  recordTotal.value = result.total
+}
+
+async function changeRecordPage() {
+  try {
+    await loadRecords()
+  } catch (error) {
+    detailError.value = describeError(error)
+  }
+}
+
 onMounted(load)
 async function takeDown(rawRow: unknown) {
-  const row = rawRow as AdminItem
+  const row = rawRow as ItemRecord
   if (actingId.value) return
   actingId.value = row.id
   try {
@@ -115,10 +143,7 @@ async function takeDown(rawRow: unknown) {
           (!!v?.trim() && v.trim().length <= 500) || '请填写 1～500 字的原因',
       },
     )
-    await http.post(`/admin/items/${row.id}/take-down`, {
-      expectedVersion: row.version,
-      reason: value.trim(),
-    })
+    await takeDownItem(row.id, row.version, value.trim())
     ElMessage.success('已下架，相关会话停止新增留言')
     await load()
   } catch (e) {
@@ -133,9 +158,9 @@ async function takeDown(rawRow: unknown) {
   <section class="admin-items">
     <div class="head">
       <h1>信息管理</h1>
-      <el-radio-group v-model="status" @change="load">
-        <el-radio-button label="PENDING_REVIEW">待审核</el-radio-button>
-        <el-radio-button label="RETURNED">已退回</el-radio-button>
+      <el-radio-group v-model="status" @change="switchStatus">
+        <el-radio-button value="PENDING_REVIEW">待审核</el-radio-button>
+        <el-radio-button value="RETURNED">已退回</el-radio-button>
         <el-radio-button value="PUBLISHED">已发布</el-radio-button>
       </el-radio-group>
     </div>
@@ -154,8 +179,10 @@ async function takeDown(rawRow: unknown) {
         <template #default="{ row }">{{ typeText[row.type] ?? row.type }}</template>
       </el-table-column>
       <el-table-column prop="location" label="地点" width="140" />
-      <el-table-column prop="publisherNickname" label="发布者" width="110" />
-      <el-table-column prop="createdAt" label="提交时间" width="200" />
+      <el-table-column prop="publisher.nickname" label="发布者" width="110" />
+      <el-table-column label="提交时间" width="200">
+        <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
+      </el-table-column>
       <el-table-column
         v-if="status === 'RETURNED'"
         prop="reviewReason"
@@ -185,12 +212,23 @@ async function takeDown(rawRow: unknown) {
         </template>
       </el-table-column>
     </el-table>
+    <el-pagination
+      v-if="total > PAGE_SIZE"
+      v-model:current-page="page"
+      class="pager"
+      :page-size="PAGE_SIZE"
+      :total="total"
+      layout="prev, pager, next, total"
+      :disabled="loading || !!actingId"
+      @current-change="load"
+    />
     <el-dialog v-model="detailVisible" title="物品审核详情" width="min(720px, 92vw)">
       <p v-if="detailLoading" role="status">正在加载…</p>
       <el-alert v-else-if="detailError" :title="detailError" type="error" :closable="false" />
       <article v-else-if="selectedItem">
         <h2>{{ selectedItem.title }}</h2>
-        <p>发生地点：{{ selectedItem.location }}</p>
+        <p>发布者：{{ selectedItem.publisher.nickname }}</p>
+        <p>发生地点：{{ selectedItem.location }} · 发生日期：{{ selectedItem.occurredDate }}</p>
         <p class="description">{{ selectedItem.description }}</p>
         <div class="images">
           <img
@@ -201,11 +239,20 @@ async function takeDown(rawRow: unknown) {
           />
         </div>
         <h3>审核记录</h3>
-        <p v-if="!selectedItem.reviewRecords.length">暂无审核记录。</p>
-        <p v-for="record in selectedItem.reviewRecords" :key="record.id">
-          {{ record.operator_nickname }} · {{ record.action
+        <p v-if="!records.length">暂无审核记录。</p>
+        <p v-for="record in records" :key="record.id">
+          {{ formatTime(record.createdAt) }} · {{ actionText[record.action] ?? record.action
           }}<span v-if="record.reason">：{{ record.reason }}</span>
         </p>
+        <el-pagination
+          v-if="recordTotal > PAGE_SIZE"
+          v-model:current-page="recordPage"
+          small
+          :page-size="PAGE_SIZE"
+          :total="recordTotal"
+          layout="prev, pager, next"
+          @current-change="changeRecordPage"
+        />
       </article>
     </el-dialog>
   </section>
@@ -230,6 +277,10 @@ async function takeDown(rawRow: unknown) {
 .muted {
   color: var(--app-text-secondary, #888);
   font-size: 13px;
+}
+.pager {
+  margin-top: 16px;
+  justify-content: flex-end;
 }
 .description {
   white-space: pre-wrap;

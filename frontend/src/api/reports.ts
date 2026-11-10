@@ -1,16 +1,17 @@
 import { http } from './http'
+import type { Message } from './claim'
 import type { PageData } from '@/types/api'
 
-// 举报接口（FR-22、FR-27，选做）。字段与 openapi.yaml 的 Report 对齐。
+// 举报接口（FR-22、FR-27，选做）。字段与 openapi.yaml 的 Report 对齐，编号以字符串传输。
 
 export type ReportStatus = 'PENDING' | 'RESOLVED'
 export type ReportAction = 'KEEP' | 'TAKE_DOWN' | 'REJECT_PENDING_CLAIM'
 
 export interface Report {
-  id: number
-  itemId: number
-  claimId: number | null
-  clueId: number | null
+  id: string
+  itemId: string
+  claimId: string | null
+  clueId: string | null
   reason: string
   status: ReportStatus
   action: ReportAction | null
@@ -21,22 +22,17 @@ export interface Report {
 }
 
 export interface CreateReportBody {
-  itemId: string | number
-  claimId?: number | null
-  clueId?: string | number | null
+  itemId: string
+  claimId?: string
+  clueId?: string
   reason: string
 }
 
 export interface ReportConversation {
   kind: 'CLAIM' | 'CLUE'
-  contextId: number
+  contextId: string
   evidenceText: string
-  items: Array<{
-    id: number
-    sender: { id: number; nickname: string }
-    content: string
-    createdAt: string
-  }>
+  items: Message[]
   page: number
   pageSize: number
   total: number
@@ -58,12 +54,12 @@ export function listAdminReports(
   return http.get<PageData<Report>>('/admin/reports', { params: { status, page, pageSize } })
 }
 
-export function getAdminReport(reportId: number): Promise<Report> {
+export function getAdminReport(reportId: string): Promise<Report> {
   return http.get<Report>(`/admin/reports/${reportId}`)
 }
 
 export function getReportConversation(
-  reportId: number,
+  reportId: string,
   page = 1,
   pageSize = 50,
 ): Promise<ReportConversation> {
@@ -73,7 +69,7 @@ export function getReportConversation(
 }
 
 export function resolveReport(
-  reportId: number,
+  reportId: string,
   expectedVersion: number,
   action: ReportAction,
   reason: string,

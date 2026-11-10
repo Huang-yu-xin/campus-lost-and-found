@@ -5,6 +5,7 @@ import type { Claim } from '@/api/claim'
 
 import { describeError } from '@/api/feedback'
 import { http } from '@/api/http'
+import { formatTime } from '@/utils/time'
 
 const router = useRouter()
 const route = useRoute()
@@ -94,7 +95,9 @@ watch(
           <el-tag :type="tagType(row.status)">{{ statusText[row.status] ?? row.status }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="createdAt" label="申请时间" width="200" />
+      <el-table-column label="申请时间" width="200">
+        <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
+      </el-table-column>
       <el-table-column label="操作" width="120" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="router.push(`/claims/${row.id}`)"

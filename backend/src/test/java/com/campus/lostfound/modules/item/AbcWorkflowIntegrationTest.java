@@ -68,8 +68,8 @@ class AbcWorkflowIntegrationTest {
     @Test void personalClaimsArePagedFilteredAndCannotEscapeOwnership() throws Exception {
         String item = publish();
         approve(item);
-        long first = apply(applicantSession, item);
-        long second = apply(otherSession, item);
+        String first = apply(applicantSession, item);
+        String second = apply(otherSession, item);
         mvc.perform(get("/api/v1/me/claims").session(applicantSession))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].id").value(first));
@@ -145,8 +145,11 @@ class AbcWorkflowIntegrationTest {
         var clue = clues.create(applicant, Long.parseLong(item), "服务台曾经收到过这样的一件物品");
         mvc.perform(get("/api/v1/admin/items").param("status", "PUBLISHED").session(ownerSession))
                 .andExpect(status().isForbidden());
-        mvc.perform(get("/api/v1/admin/items").param("status", "PUBLISHED").session(adminSession))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.data[?(@.id == " + item + ")]").isNotEmpty());
+        mvc.perform(get("/api/v1/admin/items").param("status", "PUBLISHED").param("pageSize", "50").session(adminSession))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.pageSize").value(50))
+                .andExpect(jsonPath("$.data.items[?(@.id == '" + item + "')].publisher.id").value(Long.toString(owner)));
+        mvc.perform(get("/api/v1/admin/items").param("pageSize", "51").session(adminSession))
+                .andExpect(status().isBadRequest());
         send(adminSession, post("/api/v1/admin/items/" + item + "/take-down"), Map.of("expectedVersion", 1, "reason", "信息有误"))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("VERSION_CONFLICT"));
         send(adminSession, post("/api/v1/admin/items/" + item + "/take-down"), Map.of("expectedVersion", 2, "reason", "信息有误"))
@@ -180,7 +183,15 @@ class AbcWorkflowIntegrationTest {
         mvc.perform(get("/api/v1/items/{id}", item)).andExpect(status().isOk());
         send(ownerSession, patch("/api/v1/items/" + item), Map.of("expectedVersion", 1, "title", "旧页面修改"))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("VERSION_CONFLICT"));
-        long claim = apply(applicantSession, item);
+        String claim = apply(applicantSession, item);
+        // 认领详情的物品按合同返回完整 ItemRecord，编号为字符串
+        mvc.perform(get("/api/v1/claims/{id}", claim).session(applicantSession))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.claim.itemId").value(item))
+                .andExpect(jsonPath("$.data.claim.applicant.id").value(Long.toString(applicant)))
+                .andExpect(jsonPath("$.data.item.id").value(item))
+                .andExpect(jsonPath("$.data.item.publisher.id").value(Long.toString(owner)))
+                .andExpect(jsonPath("$.data.item.images").isArray())
+                .andExpect(jsonPath("$.data.item.version").value(2));
         send(ownerSession, post("/api/v1/claims/" + claim + "/confirm"), Map.of())
                 .andExpect(status().isBadRequest());
         send(ownerSession, post("/api/v1/claims/" + claim + "/confirm"), Map.of("expectedVersion", 1))
@@ -222,9 +233,21 @@ class AbcWorkflowIntegrationTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.version").value(3));
         send(adminSession, post("/api/v1/admin/items/" + item + "/approve"), Map.of("expectedVersion", 2))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("VERSION_CONFLICT"));
-        approve(item).andExpect(jsonPath("$.data.version").value(4));
+        approve(item).andExpect(jsonPath("$.data.version").value(4))
+                .andExpect(jsonPath("$.data.id").value(item)).andExpect(jsonPath("$.data.status").value("PUBLISHED"));
         assertThat(jdbc.queryForList("SELECT item_version FROM review_records WHERE item_id=? ORDER BY id", Long.class, item))
                 .containsExactly(2L, 4L);
+        // 处置记录分页、最新在前
+        mvc.perform(get("/api/v1/admin/items/{id}/review-records", item).param("pageSize", "1").session(adminSession))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(2))
+                .andExpect(jsonPath("$.data.items[0].action").value("APPROVE"))
+                .andExpect(jsonPath("$.data.items[0].itemId").value(item))
+                .andExpect(jsonPath("$.data.items[0].operatorId").value(Long.toString(admin)));
+        mvc.perform(get("/api/v1/admin/items/{id}", item).session(adminSession))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.reviewRecords").doesNotExist())
+                .andExpect(jsonPath("$.data.publisher.id").value(Long.toString(owner)));
+        assertThat(jdbc.queryForList("SELECT action FROM operation_logs WHERE entity_type='ITEM' AND entity_id=? ORDER BY id",
+                String.class, item)).containsExactly("RETURN_ITEM", "APPROVE_ITEM");
     }
 
     @Test void studentAuthorizationDoesNotRegressToTemporaryLogin() throws Exception {
@@ -263,7 +286,7 @@ class AbcWorkflowIntegrationTest {
         try {
             String item = publish();
             approve(item);
-            long first = apply(applicantSession, item), second = apply(otherSession, item);
+            long first = Long.parseLong(apply(applicantSession, item)), second = Long.parseLong(apply(otherSession, item));
             assertThat(race(() -> claims.confirmClaim(owner, first, 1), () -> claims.confirmClaim(owner, second, 1)))
                     .containsExactlyInAnyOrder("OK", "VERSION_CONFLICT");
             assertThat(jdbc.queryForList("SELECT status FROM claims WHERE item_id=? ORDER BY status", String.class, item))
@@ -317,11 +340,11 @@ class AbcWorkflowIntegrationTest {
                 .andExpect(status().isOk());
     }
 
-    private long apply(MockHttpSession session, String item) throws Exception {
+    private String apply(MockHttpSession session, String item) throws Exception {
         String response = send(session, post("/api/v1/items/" + item + "/claims"),
                 Map.of("description", "这是认领所需的完整物品特征描述信息"))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-        return ((Number) JsonPath.read(response, "$.data.id")).longValue();
+        return JsonPath.read(response, "$.data.id");
     }
 
     private ResultActions send(MockHttpSession session, MockHttpServletRequestBuilder request, Object body) throws Exception {

@@ -48,14 +48,7 @@ public class ClaimController {
                 claimService.createClaim(currentUserId(authentication), itemId, request.description()));
     }
 
-    /** 发布者视角：我发布的信息收到的认领申请（扩展接口，待写入接口文档）。 */
-    @GetMapping("/claims/received")
-    public ApiResponse<java.util.List<java.util.Map<String, Object>>> received(
-            Authentication authentication) {
-        return ApiResponse.ok(claimService.receivedClaims(currentUserId(authentication)));
-    }
-
-    /** 认领私有详情：仅申请人与发布人可见。 */
+    /** 我提交的认领申请，只含本人记录。 */
     @GetMapping("/me/claims")
     public ApiResponse<PageData<ClaimView>> mine(Authentication authentication,
             @RequestParam(defaultValue = "1") int page,
@@ -65,6 +58,7 @@ public class ClaimController {
                 status, null, page, pageSize));
     }
 
+    /** 我发布的信息收到的认领申请；itemId 只能缩小范围。 */
     @GetMapping("/me/received-claims")
     public ApiResponse<PageData<ClaimView>> receivedPage(Authentication authentication,
             @RequestParam(defaultValue = "1") int page,
@@ -75,6 +69,7 @@ public class ClaimController {
                 status, itemId, page, pageSize));
     }
 
+    /** 认领私有详情：仅申请人与发布人可见。 */
     @GetMapping("/claims/{claimId}")
     public ApiResponse<ClaimDetailView> detail(@PathVariable("claimId") long claimId,
                                                Authentication authentication) {

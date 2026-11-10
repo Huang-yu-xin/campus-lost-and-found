@@ -1,6 +1,7 @@
 package com.campus.lostfound.modules.claim;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.endsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -72,7 +73,9 @@ class ClaimConversationIntegrationTest {
 
         sendMessage(applicantSession, claimId, "你好，这个钱包是我丢的，里面有一张校园卡")
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.sender.id").value(applicantId));
+                .andExpect(jsonPath("$.data.id").isString())
+                .andExpect(jsonPath("$.data.sender.id").value(Long.toString(applicantId)))
+                .andExpect(jsonPath("$.data.createdAt").value(endsWith("Z")));
 
         mockMvc.perform(get("/api/v1/claims/{id}/messages", claimId).session(publisherSession))
                 .andExpect(status().isOk())
@@ -125,7 +128,8 @@ class ClaimConversationIntegrationTest {
         Map<String, Object> contact = readData(mockMvc.perform(
                 get("/api/v1/claims/{id}/counterparty-contact", claimId).session(publisherSession))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
-        assertThat(contact).containsEntry("phone", "13900001111");
+        assertThat(contact).containsEntry("claimId", Long.toString(claimId))
+                .containsEntry("phone", "13900001111");
 
         // 申请人查看发布人：对方尚未授权，403
         mockMvc.perform(get("/api/v1/claims/{id}/counterparty-contact", claimId).session(applicantSession))
@@ -135,8 +139,10 @@ class ClaimConversationIntegrationTest {
         // 申请人可以看到自己刚授权的设置，但接口不返回真实号码
         mockMvc.perform(get("/api/v1/claims/{id}/contact-permission", claimId).session(applicantSession))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.claimId").value(Long.toString(claimId)))
                 .andExpect(jsonPath("$.data.phoneVisible").value(true))
-                .andExpect(jsonPath("$.data.version").value(1));
+                .andExpect(jsonPath("$.data.version").value(1))
+                .andExpect(jsonPath("$.data.updatedAt").value(endsWith("Z")));
 
         // 撤回后立即失效，旧版本号不能再写
         setPermission(applicantSession, claimId, 1, false, false).andExpect(status().isOk())

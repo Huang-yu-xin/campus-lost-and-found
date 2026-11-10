@@ -1,6 +1,8 @@
 package com.campus.lostfound.modules.report;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.endsWith;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -80,25 +82,32 @@ class ReportIntegrationTest {
         long reportId = createReport(applicantSession, itemId, claimId, null, "对方要求我先转账再归还")
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.status").value("PENDING"))
-                .andExpect(jsonPath("$.data.claimId").value(claimId))
+                // 合同：编号为字符串，时间带 UTC 时区
+                .andExpect(jsonPath("$.data.itemId").value(Long.toString(itemId)))
+                .andExpect(jsonPath("$.data.claimId").value(Long.toString(claimId)))
+                .andExpect(jsonPath("$.data.clueId").value(nullValue()))
+                .andExpect(jsonPath("$.data.createdAt").value(endsWith("Z")))
                 .andReturn().getResponse().getContentAsString().transform(this::reportIdOf);
+        String report = Long.toString(reportId);
 
         mockMvc.perform(get("/api/v1/me/reports").session(applicantSession))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
-                .andExpect(jsonPath("$.data.items[0].id").value(reportId));
+                .andExpect(jsonPath("$.data.items[0].id").value(report));
 
         mockMvc.perform(get("/api/v1/admin/reports").session(adminSession))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.items[0].id").value(reportId));
+                .andExpect(jsonPath("$.data.items[0].id").value(report));
         mockMvc.perform(get("/api/v1/admin/reports/" + reportId).session(adminSession))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.id").value(reportId));
+                .andExpect(jsonPath("$.data.id").value(report));
 
         mockMvc.perform(get("/api/v1/admin/reports/" + reportId + "/conversation").session(adminSession))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.kind").value("CLAIM"))
-                .andExpect(jsonPath("$.data.contextId").value(claimId))
+                .andExpect(jsonPath("$.data.contextId").value(Long.toString(claimId)))
+                .andExpect(jsonPath("$.data.items[0].sender.id").value(Long.toString(applicantId)))
+                .andExpect(jsonPath("$.data.items[0].createdAt").value(endsWith("Z")))
                 .andExpect(jsonPath("$.data.evidenceText").value("钱包内侧有一张公交卡和一张照片"))
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].content").value("这是我的钱包，可以约时间拿吗"));
@@ -125,6 +134,11 @@ class ReportIntegrationTest {
         createReport(outsiderSession, itemId, claimId, null, "我也要举报这个认领")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("REPORT_CONTEXT_INVALID"));
+
+        // 编号不是正整数字符串时按参数错误拒绝
+        postJson(applicantSession, "/api/v1/reports", Map.of("itemId", "0", "reason", "编号格式错误的举报"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
 
         // 普通举报只针对公开物品
         long offShelfItem = createItem(publisherId, "OFF_SHELF");
@@ -238,10 +252,11 @@ class ReportIntegrationTest {
 
     private ResultActions createReport(MockHttpSession session, long itemId, Long claimId, Long clueId,
             String reason) throws Exception {
+        // 合同中的编号以字符串提交
         Map<String, Object> body = new HashMap<>();
-        body.put("itemId", itemId);
-        body.put("claimId", claimId);
-        body.put("clueId", clueId);
+        body.put("itemId", Long.toString(itemId));
+        body.put("claimId", claimId == null ? null : claimId.toString());
+        body.put("clueId", clueId == null ? null : clueId.toString());
         body.put("reason", reason);
         return postJson(session, "/api/v1/reports", body);
     }
@@ -257,8 +272,8 @@ class ReportIntegrationTest {
     }
 
     private long reportId(String body) {
-        Number id = JsonPath.read(body, "$.data.id");
-        return id.longValue();
+        String id = JsonPath.read(body, "$.data.id");
+        return Long.parseLong(id);
     }
 
     private ResultActions postJson(MockHttpSession session, String url, Object body) throws Exception {

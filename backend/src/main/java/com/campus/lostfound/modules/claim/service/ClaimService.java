@@ -1,18 +1,23 @@
 package com.campus.lostfound.modules.claim.service;
 
+import static com.campus.lostfound.common.sql.Rows.num;
+import static com.campus.lostfound.common.sql.Rows.str;
+
+import com.campus.lostfound.common.api.PageData;
+import com.campus.lostfound.common.api.Pages;
 import com.campus.lostfound.common.error.BusinessException;
 import com.campus.lostfound.common.error.ErrorCode;
+import com.campus.lostfound.common.sql.Rows;
 import com.campus.lostfound.common.web.RequestIdFilter;
 import com.campus.lostfound.modules.claim.dto.ClaimDtos.ClaimDetailView;
 import com.campus.lostfound.modules.claim.dto.ClaimDtos.ClaimView;
-import com.campus.lostfound.modules.claim.dto.ClaimDtos.ItemBrief;
 import com.campus.lostfound.modules.claim.dto.ClaimDtos.UserBrief;
 import com.campus.lostfound.modules.claim.mapper.ClaimMapper;
+import com.campus.lostfound.modules.item.service.ItemService;
 import com.campus.lostfound.modules.item.service.ItemStateLocks;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,31 +31,32 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ClaimService {
 
-    @Transactional(readOnly = true)
-    public com.campus.lostfound.common.api.PageData<ClaimView> personal(
-            long userId, boolean received, String status, Long itemId, int page, int pageSize) {
-        com.campus.lostfound.common.api.Pages.page(page);
-        com.campus.lostfound.common.api.Pages.pageSize(pageSize);
-        if ((status != null && !java.util.Set.of("PENDING", "CONFIRMED", "REJECTED", "COMPLETED", "CLOSED").contains(status))
-                || (itemId != null && itemId <= 0)) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR);
-        }
-        var rows = mapper.personalRows(userId, received, status, itemId, pageSize,
-                com.campus.lostfound.common.api.Pages.offset(page, pageSize));
-        return new com.campus.lostfound.common.api.PageData<>(
-                rows.stream().map(ClaimService::toView).toList(), page, pageSize,
-                mapper.countPersonal(userId, received, status, itemId));
-    }
+    private static final Set<String> STATUSES = Set.of("PENDING", "CONFIRMED", "REJECTED", "COMPLETED", "CLOSED");
 
     private final ClaimMapper mapper;
     private final ContactPermissionService contactPermissionService;
     private final ItemStateLocks stateLocks;
+    private final ItemService items;
 
     public ClaimService(ClaimMapper mapper, ContactPermissionService contactPermissionService,
-            ItemStateLocks stateLocks) {
+            ItemStateLocks stateLocks, ItemService items) {
         this.mapper = mapper;
         this.contactPermissionService = contactPermissionService;
         this.stateLocks = stateLocks;
+        this.items = items;
+    }
+
+    /** 我申请的 / 我收到的认领，createdAt、id 降序；itemId 只能缩小本人可见范围。 */
+    @Transactional(readOnly = true)
+    public PageData<ClaimView> personal(
+            long userId, boolean received, String status, Long itemId, int page, int pageSize) {
+        int offset = Pages.offset(page, pageSize);
+        if ((status != null && !STATUSES.contains(status)) || (itemId != null && itemId <= 0)) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR);
+        }
+        var rows = mapper.personalRows(userId, received, status, itemId, pageSize, offset);
+        return new PageData<>(rows.stream().map(ClaimService::toView).toList(), page, pageSize,
+                mapper.countPersonal(userId, received, status, itemId));
     }
 
     /** FR-15 提交认领申请。 */
@@ -98,6 +104,7 @@ public class ClaimService {
     }
 
     /** 认领私有详情：仅申请人、发布人可见；其他角色（含无上下文的管理员）一律 404。 */
+    @Transactional(readOnly = true)
     public ClaimDetailView getClaim(long userId, long claimId) {
         Map<String, Object> claim = mapper.findClaim(claimId);
         if (claim == null) {
@@ -109,8 +116,8 @@ public class ClaimService {
             // 不区分「不存在」与「无权查看」，避免探测
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "认领申请不存在");
         }
-        Map<String, Object> item = mapper.findItemBrief(num(claim, "item_id"));
-        return new ClaimDetailView(toView(claim), toItem(item));
+        // 参与者校验已在上面完成，物品按合同返回完整 ItemRecord
+        return new ClaimDetailView(toView(claim), items.getRecord(num(claim, "item_id")));
     }
 
     /** FR-16 发布者确认认领。 */
@@ -201,25 +208,6 @@ public class ClaimService {
         return toView(mapper.findClaim(claimId));
     }
 
-    /** 发布者视角：我发布的信息收到的认领申请列表。 */
-    public java.util.List<java.util.Map<String, Object>> receivedClaims(long userId) {
-        java.util.List<java.util.Map<String, Object>> rows = mapper.listReceivedClaims(userId);
-        java.util.List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
-        for (Map<String, Object> r : rows) {
-            java.util.Map<String, Object> row = new java.util.LinkedHashMap<>();
-            row.put("id", num(r, "id"));
-            row.put("itemId", num(r, "item_id"));
-            row.put("itemTitle", str(r, "item_title"));
-            row.put("itemStatus", str(r, "item_status"));
-            row.put("applicantNickname", str(r, "applicant_nickname"));
-            row.put("status", str(r, "status"));
-            row.put("reason", r.get("reason") == null ? null : str(r, "reason"));
-            row.put("createdAt", time(r, "created_at"));
-            result.add(row);
-        }
-        return result;
-    }
-
     // ---------------- 内部工具 ----------------
     private static void requireVersion(Map<String, Object> claim, long expectedVersion) {
         if (num(claim, "version") != expectedVersion) {
@@ -242,49 +230,15 @@ public class ClaimService {
 
     private static ClaimView toView(Map<String, Object> c) {
         return new ClaimView(
-                num(c, "id"),
-                num(c, "item_id"),
-                new UserBrief(num(c, "applicant_id"), str(c, "applicant_nickname")),
-                new UserBrief(num(c, "publisher_id"), str(c, "publisher_nickname")),
+                Rows.id(c, "id"),
+                Rows.id(c, "item_id"),
+                new UserBrief(Rows.id(c, "applicant_id"), str(c, "applicant_nickname")),
+                new UserBrief(Rows.id(c, "publisher_id"), str(c, "publisher_nickname")),
                 str(c, "description"),
                 str(c, "status"),
-                c.get("reason") == null ? null : str(c, "reason"),
+                str(c, "reason"),
                 c.get("version") == null ? 1L : num(c, "version"),
-                time(c, "created_at"),
-                time(c, "updated_at"));
-    }
-
-    private static ItemBrief toItem(Map<String, Object> i) {
-        if (i == null) {
-            return null;
-        }
-        return new ItemBrief(
-                num(i, "id"), str(i, "type"), str(i, "category"), str(i, "location"),
-                str(i, "title"), str(i, "description"), str(i, "status"),
-                time(i, "occurred_date"), time(i, "published_at"), time(i, "created_at"));
-    }
-
-    private static String str(Map<String, Object> m, String key) {
-        Object v = m.get(key);
-        return v == null ? null : String.valueOf(v);
-    }
-
-    private static long num(Map<String, Object> m, String key) {
-        Object v = m.get(key);
-        return v instanceof Number n ? n.longValue() : 0L;
-    }
-
-    private static LocalDateTime time(Map<String, Object> m, String key) {
-        Object v = m.get(key);
-        if (v instanceof LocalDateTime ldt) {
-            return ldt;
-        }
-        if (v instanceof Timestamp ts) {
-            return ts.toLocalDateTime();
-        }
-        if (v instanceof java.sql.Date d) {
-            return d.toLocalDate().atStartOfDay();
-        }
-        return null;
+                Rows.instant(c, "created_at"),
+                Rows.instant(c, "updated_at"));
     }
 }

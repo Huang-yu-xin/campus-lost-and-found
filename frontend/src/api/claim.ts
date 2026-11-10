@@ -1,17 +1,19 @@
 import { http } from './http'
+import type { ItemRecord } from './items'
 
 // 认领模块接口（FR-15 ~ FR-18）。字段与 openapi.yaml 的 Claim / ClaimDetail 对齐。
+// 编号按合同以字符串传输，不转成 Number；时间为带时区的 ISO 8601 字符串。
 
 export interface UserBrief {
-  id: number
+  id: string
   nickname: string
 }
 
 export type ClaimStatus = 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'COMPLETED' | 'CLOSED'
 
 export interface Claim {
-  id: number
-  itemId: number
+  id: string
+  itemId: string
   applicant: UserBrief
   publisher: UserBrief
   description: string
@@ -22,52 +24,39 @@ export interface Claim {
   updatedAt: string
 }
 
-export interface ItemBrief {
-  id: number
-  type: string
-  category: string
-  location: string
-  title: string
-  description: string
-  status: string
-  occurredDate: string | null
-  publishedAt: string | null
-  createdAt: string
-}
-
 export interface ClaimDetail {
   claim: Claim
-  item: ItemBrief
+  item: ItemRecord
 }
 
-export function createClaim(itemId: string | number, description: string): Promise<Claim> {
+export function createClaim(itemId: string, description: string): Promise<Claim> {
   return http.post<Claim>(`/items/${itemId}/claims`, { description })
 }
 
-export function getClaim(claimId: number): Promise<ClaimDetail> {
+export function getClaim(claimId: string): Promise<ClaimDetail> {
   return http.get<ClaimDetail>(`/claims/${claimId}`)
 }
 
-export function confirmClaim(claimId: number, expectedVersion: number): Promise<Claim> {
+export function confirmClaim(claimId: string, expectedVersion: number): Promise<Claim> {
   return http.post<Claim>(`/claims/${claimId}/confirm`, { expectedVersion })
 }
 
 export function rejectClaim(
-  claimId: number,
+  claimId: string,
   expectedVersion: number,
   reason: string,
 ): Promise<Claim> {
   return http.post<Claim>(`/claims/${claimId}/reject`, { expectedVersion, reason })
 }
 
-export function completeClaim(claimId: number, expectedVersion: number): Promise<Claim> {
+export function completeClaim(claimId: string, expectedVersion: number): Promise<Claim> {
   return http.post<Claim>(`/claims/${claimId}/complete`, { expectedVersion })
 }
 
 // ---------------- FR-19 留言 ----------------
 
 export interface Message {
-  id: number
+  id: string
   sender: UserBrief
   content: string
   createdAt: string
@@ -80,18 +69,18 @@ export interface MessagePage {
   total: number
 }
 
-export function listMessages(claimId: number, page = 1, pageSize = 50): Promise<MessagePage> {
+export function listMessages(claimId: string, page = 1, pageSize = 50): Promise<MessagePage> {
   return http.get<MessagePage>(`/claims/${claimId}/messages`, { params: { page, pageSize } })
 }
 
-export function sendMessage(claimId: number, content: string): Promise<Message> {
+export function sendMessage(claimId: string, content: string): Promise<Message> {
   return http.post<Message>(`/claims/${claimId}/messages`, { content })
 }
 
 // ---------------- FR-06 联系方式授权 ----------------
 
 export interface ContactPermission {
-  claimId: number
+  claimId: string
   phoneVisible: boolean
   emailVisible: boolean
   effective: boolean
@@ -100,17 +89,17 @@ export interface ContactPermission {
 }
 
 export interface CounterpartyContact {
-  claimId: number
+  claimId: string
   phone?: string
   email?: string
 }
 
-export function getContactPermission(claimId: number): Promise<ContactPermission> {
+export function getContactPermission(claimId: string): Promise<ContactPermission> {
   return http.get<ContactPermission>(`/claims/${claimId}/contact-permission`)
 }
 
 export function setContactPermission(
-  claimId: number,
+  claimId: string,
   expectedVersion: number,
   phoneVisible: boolean,
   emailVisible: boolean,
@@ -122,6 +111,6 @@ export function setContactPermission(
   })
 }
 
-export function getCounterpartyContact(claimId: number): Promise<CounterpartyContact> {
+export function getCounterpartyContact(claimId: string): Promise<CounterpartyContact> {
   return http.get<CounterpartyContact>(`/claims/${claimId}/counterparty-contact`)
 }

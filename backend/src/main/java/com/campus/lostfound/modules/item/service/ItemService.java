@@ -2,6 +2,7 @@ package com.campus.lostfound.modules.item.service;
 
 import com.campus.lostfound.common.api.FieldError;
 import com.campus.lostfound.common.api.PageData;
+import com.campus.lostfound.common.api.Pages;
 import com.campus.lostfound.common.error.BusinessException;
 import com.campus.lostfound.common.error.ErrorCode;
 import com.campus.lostfound.modules.item.dto.CreateItemRequest;
@@ -140,6 +141,25 @@ public class ItemService {
         var pictures = images.forItems(rows.stream().map(ItemRow::id).toList());
         return new PageData<>(rows.stream().map(row -> record(row, pictures.getOrDefault(row.id(), List.of())))
                 .toList(), search.page(), search.pageSize(), total);
+    }
+
+    /** 管理员审核、认领参与者等场景读取完整记录；调用方须先完成权限判断。 */
+    @Transactional(readOnly = true)
+    public ItemRecord getRecord(long id) {
+        ItemRow row = mapper.findById(id);
+        if (row == null) throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+        return record(row);
+    }
+
+    /** 管理端按状态分页，createdAt、id 升序。 */
+    @Transactional(readOnly = true)
+    public PageData<ItemRecord> listByStatus(String status, int page, int pageSize) {
+        int offset = Pages.offset(page, pageSize);
+        long total = mapper.countByStatus(status);
+        var rows = offset >= total ? List.<ItemRow>of() : mapper.listByStatus(status, pageSize, offset);
+        var pictures = images.forItems(rows.stream().map(ItemRow::id).toList());
+        return new PageData<>(rows.stream().map(row -> record(row, pictures.getOrDefault(row.id(), List.of())))
+                .toList(), page, pageSize, total);
     }
 
     @Transactional

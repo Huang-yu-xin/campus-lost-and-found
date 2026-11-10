@@ -1,15 +1,16 @@
 package com.campus.lostfound.modules.moderation.controller;
 
 import com.campus.lostfound.common.api.ApiResponse;
-import com.campus.lostfound.modules.moderation.service.ModerationService;
+import com.campus.lostfound.common.api.PageData;
+import com.campus.lostfound.modules.item.dto.ItemViews.ItemRecord;
 import com.campus.lostfound.modules.item.dto.VersionRequest;
+import com.campus.lostfound.modules.moderation.dto.ReviewRecord;
+import com.campus.lostfound.modules.moderation.service.ModerationService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
-import java.util.List;
-import java.util.Map;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,41 +37,46 @@ public class ModerationController {
             @NotBlank @Size(max = 500) String reason) {
     }
 
-    /** 待审核列表，默认只看 PENDING_REVIEW。 */
+    /** 管理列表，默认只看 PENDING_REVIEW，分页。 */
     @GetMapping
-    public ApiResponse<List<Map<String, Object>>> list(
-            @RequestParam(value = "status", required = false) String status) {
-        return ApiResponse.ok(service.list(status));
+    public ApiResponse<PageData<ItemRecord>> list(
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
+        return ApiResponse.ok(service.list(status, page, pageSize));
     }
 
     @GetMapping("/{itemId}")
-    public ApiResponse<Map<String, Object>> detail(@PathVariable("itemId") long itemId) {
+    public ApiResponse<ItemRecord> detail(@PathVariable("itemId") long itemId) {
         return ApiResponse.ok(service.detail(itemId));
     }
 
     @GetMapping("/{itemId}/review-records")
-    public ApiResponse<List<Map<String, Object>>> records(@PathVariable("itemId") long itemId) {
-        return ApiResponse.ok(service.reviewRecords(itemId));
+    public ApiResponse<PageData<ReviewRecord>> records(
+            @PathVariable("itemId") long itemId,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
+        return ApiResponse.ok(service.reviewRecords(itemId, page, pageSize));
     }
 
     @PostMapping("/{itemId}/approve")
-    public ApiResponse<Map<String, Object>> approve(@PathVariable("itemId") long itemId,
-                                                    @Valid @RequestBody VersionRequest request,
-                                                    Authentication authentication) {
+    public ApiResponse<ItemRecord> approve(@PathVariable("itemId") long itemId,
+                                           @Valid @RequestBody VersionRequest request,
+                                           Authentication authentication) {
         return ApiResponse.ok(service.approve(userId(authentication), itemId, request.expectedVersion()));
     }
 
     @PostMapping("/{itemId}/return")
-    public ApiResponse<Map<String, Object>> returnItem(@PathVariable("itemId") long itemId,
-                                                       @Valid @RequestBody ReasonRequest body,
-                                                       Authentication authentication) {
+    public ApiResponse<ItemRecord> returnItem(@PathVariable("itemId") long itemId,
+                                              @Valid @RequestBody ReasonRequest body,
+                                              Authentication authentication) {
         return ApiResponse.ok(service.returnItem(userId(authentication), itemId, body.expectedVersion(), body.reason()));
     }
 
     @PostMapping("/{itemId}/take-down")
-    public ApiResponse<Map<String, Object>> takeDown(@PathVariable("itemId") long itemId,
-                                                     @Valid @RequestBody ReasonRequest body,
-                                                     Authentication authentication) {
+    public ApiResponse<ItemRecord> takeDown(@PathVariable("itemId") long itemId,
+                                            @Valid @RequestBody ReasonRequest body,
+                                            Authentication authentication) {
         return ApiResponse.ok(service.takeDown(userId(authentication), itemId, body.expectedVersion(), body.reason()));
     }
 

@@ -24,6 +24,14 @@ public interface ItemMapper {
 
     ItemRow findPublished(@Param("id") long id);
 
+    /** 不限发布者和状态，只供已完成权限判断的调用方使用。 */
+    ItemRow findById(@Param("id") long id);
+
+    long countByStatus(@Param("status") String status);
+
+    List<ItemRow> listByStatus(@Param("status") String status, @Param("pageSize") int pageSize,
+            @Param("offset") long offset);
+
     long countPublished(@Param("search") ItemSearch search);
 
     List<ItemRow> listPublished(@Param("search") ItemSearch search, @Param("offset") long offset);

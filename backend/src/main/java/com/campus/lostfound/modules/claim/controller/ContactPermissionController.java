@@ -3,8 +3,8 @@ package com.campus.lostfound.modules.claim.controller;
 import com.campus.lostfound.common.api.ApiResponse;
 import com.campus.lostfound.modules.claim.dto.ClaimDtos.ContactPermissionRequest;
 import com.campus.lostfound.modules.claim.dto.ClaimDtos.ContactPermissionView;
+import com.campus.lostfound.modules.claim.dto.ClaimDtos.CounterpartyContactView;
 import com.campus.lostfound.modules.claim.service.ContactPermissionService;
-import java.util.Map;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -39,8 +39,8 @@ public class ContactPermissionController {
     }
 
     @GetMapping("/counterparty-contact")
-    public ApiResponse<Map<String, Object>> counterparty(@PathVariable("claimId") long claimId,
-                                                         Authentication authentication) {
+    public ApiResponse<CounterpartyContactView> counterparty(@PathVariable("claimId") long claimId,
+                                                             Authentication authentication) {
         return ApiResponse.ok(service.getCounterparty(userId(authentication), claimId));
     }
 

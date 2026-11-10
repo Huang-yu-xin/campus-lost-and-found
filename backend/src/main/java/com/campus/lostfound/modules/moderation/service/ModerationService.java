@@ -1,17 +1,20 @@
 package com.campus.lostfound.modules.moderation.service;
 
+import com.campus.lostfound.common.api.PageData;
+import com.campus.lostfound.common.api.Pages;
 import com.campus.lostfound.common.error.BusinessException;
 import com.campus.lostfound.common.error.ErrorCode;
-import com.campus.lostfound.common.web.RequestIdFilter;
 import com.campus.lostfound.common.sql.Rows;
-import com.campus.lostfound.modules.moderation.mapper.ModerationMapper;
+import com.campus.lostfound.common.web.RequestIdFilter;
+import com.campus.lostfound.modules.item.dto.ItemViews.ItemRecord;
+import com.campus.lostfound.modules.item.service.ItemService;
 import com.campus.lostfound.modules.item.service.ItemStateLocks;
-import com.campus.lostfound.modules.item.service.ImageService;
-import java.util.ArrayList;
+import com.campus.lostfound.modules.moderation.dto.ReviewRecord;
+import com.campus.lostfound.modules.moderation.mapper.ModerationMapper;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,93 +22,70 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ModerationService {
 
+    private static final Set<String> LISTABLE = Set.of("PENDING_REVIEW", "RETURNED", "PUBLISHED");
+
     private final ModerationMapper mapper;
     private final ItemStateLocks stateLocks;
-    private final ImageService images;
+    private final ItemService items;
 
-    public ModerationService(ModerationMapper mapper, ItemStateLocks stateLocks, ImageService images) {
+    public ModerationService(ModerationMapper mapper, ItemStateLocks stateLocks, ItemService items) {
         this.mapper = mapper;
         this.stateLocks = stateLocks;
-        this.images = images;
+        this.items = items;
     }
 
-    /** 管理列表包括待审核、已退回及可直接下架的已发布信息。 */
-    public List<Map<String, Object>> list(String status) {
+    /** 管理列表包括待审核、已退回及可直接下架的已发布信息，默认待审核，createdAt、id 升序。 */
+    public PageData<ItemRecord> list(String status, int page, int pageSize) {
         String s = status == null || status.isBlank() ? "PENDING_REVIEW" : status.trim().toUpperCase();
-        if (!java.util.Set.of("PENDING_REVIEW", "RETURNED", "PUBLISHED").contains(s)) {
+        if (!LISTABLE.contains(s)) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "status 只支持 PENDING_REVIEW / RETURNED / PUBLISHED");
         }
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (Map<String, Object> r : mapper.listByStatus(s)) {
-            Map<String, Object> row = new LinkedHashMap<>();
-            row.put("id", r.get("id"));
-            row.put("title", r.get("title"));
-            row.put("type", r.get("type"));
-            row.put("category", r.get("category"));
-            row.put("location", r.get("location"));
-            row.put("status", r.get("status"));
-            row.put("version", r.get("version"));
-            row.put("reviewReason", r.get("review_reason"));
-            row.put("publisherNickname", r.get("publisher_nickname"));
-            row.put("createdAt", r.get("created_at"));
-            result.add(row);
-        }
-        return result;
+        return items.listByStatus(s, page, pageSize);
     }
 
-    public Map<String, Object> detail(long itemId) {
-        Map<String, Object> r = mapper.findItem(itemId);
-        if (r == null) {
+    public ItemRecord detail(long itemId) {
+        return items.getRecord(itemId);
+    }
+
+    /** 审核处置记录，createdAt、id 降序。 */
+    @Transactional(readOnly = true)
+    public PageData<ReviewRecord> reviewRecords(long itemId, int page, int pageSize) {
+        int offset = Pages.offset(page, pageSize);
+        if (mapper.findVersion(itemId) == null) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "信息不存在");
         }
-        Map<String, Object> row = new LinkedHashMap<>(r);
-        row.put("reviewRecords", reviewRecords(itemId));
-        row.put("images", images.forItems(List.of(itemId)).getOrDefault(itemId, List.of()));
-        return row;
-    }
-
-    public List<Map<String, Object>> reviewRecords(long itemId) {
-        return mapper.listReviewRecords(itemId);
+        long total = mapper.countReviewRecords(itemId);
+        List<Map<String, Object>> rows = total == 0 ? List.of() : mapper.listReviewRecords(itemId, pageSize, offset);
+        return new PageData<>(rows.stream().map(ModerationService::toRecord).toList(), page, pageSize, total);
     }
 
     @Transactional
-    public Map<String, Object> approve(long operatorId, long itemId, long expectedVersion) {
-        Map<String, Object> item = requirePending(itemId, expectedVersion);
+    public ItemRecord approve(long operatorId, long itemId, long expectedVersion) {
+        requirePending(itemId, expectedVersion);
         if (mapper.approve(itemId) == 0) {
             throw new BusinessException(ErrorCode.ITEM_STATE_CONFLICT);
         }
         record(operatorId, itemId, "APPROVE", null);
         log(operatorId, itemId, "APPROVE_ITEM", "PENDING_REVIEW", "PUBLISHED");
-        return detail(itemId);
+        return items.getRecord(itemId);
     }
 
     @Transactional
-    public Map<String, Object> returnItem(long operatorId, long itemId, long expectedVersion, String reason) {
-        String text = reason == null ? "" : reason.trim();
-        if (text.isEmpty() || text.length() > 500) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "退回原因必填且不超过 500 字");
-        }
-        Map<String, Object> item = requirePending(itemId, expectedVersion);
+    public ItemRecord returnItem(long operatorId, long itemId, long expectedVersion, String reason) {
+        String text = reason(reason, "退回原因必填且不超过 500 字");
+        requirePending(itemId, expectedVersion);
         if (mapper.returnItem(itemId, text) == 0) {
             throw new BusinessException(ErrorCode.ITEM_STATE_CONFLICT);
         }
         record(operatorId, itemId, "RETURN", text);
-        logText(operatorId, itemId, "RETURN_ITEM", "PENDING_REVIEW", "RETURNED", text);
-        return detail(itemId);
+        log(operatorId, itemId, "RETURN_ITEM", "PENDING_REVIEW", "RETURNED");
+        return items.getRecord(itemId);
     }
 
     @Transactional
-    public Map<String, Object> takeDown(long operatorId, long itemId, long expectedVersion, String reason) {
-        String text = reason == null ? "" : reason.trim();
-        if (text.isEmpty() || text.length() > 500) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "处置原因必填且不超过 500 字");
-        }
-        Map<String, Object> locked = stateLocks.lockItem(itemId);
-        requireVersion(locked, expectedVersion);
-        Map<String, Object> item = mapper.findItem(itemId);
-        if (item == null) {
-            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "信息不存在");
-        }
+    public ItemRecord takeDown(long operatorId, long itemId, long expectedVersion, String reason) {
+        String text = reason(reason, "处置原因必填且不超过 500 字");
+        requireVersion(stateLocks.lockItem(itemId), expectedVersion);
         if (mapper.takeDown(itemId) == 0) {
             throw new BusinessException(ErrorCode.ITEM_STATE_CONFLICT, "只有已发布的信息可以下架");
         }
@@ -113,22 +93,18 @@ public class ModerationService {
         mapper.closeClaimsForItem(itemId, text);
         mapper.revokePermissionsForItem(itemId);
         record(operatorId, itemId, "TAKE_DOWN", text);
-        logText(operatorId, itemId, "TAKE_DOWN_ITEM", "PUBLISHED", "OFF_SHELF", text);
-        return detail(itemId);
+        log(operatorId, itemId, "TAKE_DOWN_ITEM", "PUBLISHED", "OFF_SHELF");
+        return items.getRecord(itemId);
     }
 
     // ---------------- 内部 ----------------
 
-    private Map<String, Object> requirePending(long itemId, long expectedVersion) {
+    private void requirePending(long itemId, long expectedVersion) {
         Map<String, Object> item = stateLocks.lockItem(itemId);
         requireVersion(item, expectedVersion);
-        if (item == null) {
-            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "信息不存在");
-        }
-        if (!"PENDING_REVIEW".equals(String.valueOf(item.get("status")))) {
+        if (!"PENDING_REVIEW".equals(Rows.str(item, "status"))) {
             throw new BusinessException(ErrorCode.ITEM_STATE_CONFLICT, "当前状态不是待审核");
         }
-        return item;
     }
 
     private static void requireVersion(Map<String, Object> item, long expectedVersion) {
@@ -137,29 +113,32 @@ public class ModerationService {
         }
     }
 
+    private static String reason(String reason, String message) {
+        String text = reason == null ? "" : reason.trim();
+        if (text.isEmpty() || text.length() > 500) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, message);
+        }
+        return text;
+    }
+
+    /** 审核记录保存处置后的物品版本，便于核对每次审核对应的是哪一版内容。 */
     private void record(long operatorId, long itemId, String action, String reason) {
-        Map<String, Object> rec = new HashMap<>();
-        rec.put("itemId", itemId);
-        rec.put("operatorId", operatorId);
-        rec.put("action", action);
-        rec.put("reason", reason);
-        rec.put("itemVersion", mapper.findItem(itemId).get("version"));
-        mapper.insertReviewRecord(rec);
+        mapper.insertReviewRecord(itemId, operatorId, action, reason, mapper.findVersion(itemId));
     }
 
     private void log(long actorId, long itemId, String action, String before, String after) {
-        logText(actorId, itemId, action, before, after, null);
-    }
-
-    private void logText(long actorId, long itemId, String action, String before, String after,
-                         String reason) {
         Map<String, Object> log = new HashMap<>();
         log.put("actorId", actorId);
         log.put("entityId", itemId);
-        log.put("action", reason == null ? action : action);
+        log.put("action", action);
         log.put("beforeStatus", before);
         log.put("afterStatus", after);
         log.put("requestId", RequestIdFilter.current());
         mapper.insertOperationLog(log);
+    }
+
+    private static ReviewRecord toRecord(Map<String, Object> row) {
+        return new ReviewRecord(Rows.id(row, "id"), Rows.id(row, "item_id"), Rows.str(row, "action"),
+                Rows.str(row, "reason"), Rows.id(row, "operator_id"), Rows.instant(row, "created_at"));
     }
 }

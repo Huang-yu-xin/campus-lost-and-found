@@ -18,11 +18,13 @@ import {
 import type { ClaimDetail, ContactPermission, CounterpartyContact, Message } from '@/api/claim'
 import { createReport } from '@/api/reports'
 import { useAuthStore } from '@/stores/auth'
+import { ITEM_STATUS_LABELS } from '@/types/domain'
+import { formatTime } from '@/utils/time'
 
 const route = useRoute()
 const auth = useAuthStore()
 
-const claimId = Number(route.params.claimId)
+const claimId = String(route.params.claimId)
 const detail = ref<ClaimDetail | null>(null)
 const loading = ref(true)
 const acting = ref(false)
@@ -37,10 +39,10 @@ const statusText: Record<string, string> = {
 }
 
 const isPublisher = computed(
-  () => !!detail.value && !!auth.me && detail.value.claim.publisher.id === Number(auth.me.id),
+  () => !!detail.value && !!auth.me && detail.value.claim.publisher.id === auth.me.id,
 )
 const isApplicant = computed(
-  () => !!detail.value && !!auth.me && detail.value.claim.applicant.id === Number(auth.me.id),
+  () => !!detail.value && !!auth.me && detail.value.claim.applicant.id === auth.me.id,
 )
 const isParticipant = computed(() => isPublisher.value || isApplicant.value)
 
@@ -76,12 +78,6 @@ const permissionError = ref('')
 const counterparty = ref<CounterpartyContact | null>(null)
 const loadingContact = ref(false)
 const contactError = ref('')
-
-function formatTime(value: string | null | undefined): string {
-  if (!value) return '—'
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', { hour12: false })
-}
 
 async function load() {
   loading.value = true
@@ -266,7 +262,9 @@ onMounted(load)
             detail.claim.publisher.nickname
           }}</el-descriptions-item>
           <el-descriptions-item label="关联物品">{{ detail.item.title }}</el-descriptions-item>
-          <el-descriptions-item label="物品状态">{{ detail.item.status }}</el-descriptions-item>
+          <el-descriptions-item label="物品状态">{{
+            ITEM_STATUS_LABELS[detail.item.status] ?? detail.item.status
+          }}</el-descriptions-item>
           <el-descriptions-item label="认领凭证" :span="2">
             {{ detail.claim.description }}
           </el-descriptions-item>

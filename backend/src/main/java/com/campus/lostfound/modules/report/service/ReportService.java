@@ -7,16 +7,16 @@ import com.campus.lostfound.common.error.ErrorCode;
 import com.campus.lostfound.common.sql.Rows;
 import com.campus.lostfound.common.web.RequestIdFilter;
 import com.campus.lostfound.modules.claim.dto.ClaimDtos.MessageView;
-import com.campus.lostfound.modules.claim.dto.ClaimDtos.UserBrief;
+import com.campus.lostfound.modules.claim.service.ClaimMessageService;
 import com.campus.lostfound.modules.moderation.service.ModerationService;
 import com.campus.lostfound.modules.item.service.ItemStateLocks;
 import com.campus.lostfound.modules.report.dto.ReportDtos.CreateReportRequest;
+import com.campus.lostfound.modules.report.dto.ReportDtos.ReportConversation;
 import com.campus.lostfound.modules.report.dto.ReportDtos.ReportView;
 import com.campus.lostfound.modules.report.dto.ReportDtos.ResolveReportRequest;
 import com.campus.lostfound.modules.report.mapper.ReportMapper;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
@@ -52,14 +52,18 @@ public class ReportService {
         if (request.claimId() != null && request.clueId() != null) {
             throw new BusinessException(ErrorCode.REPORT_CONTEXT_INVALID, "认领与线索上下文只能选择一个");
         }
-        Map<String, Object> item = mapper.findItem(request.itemId());
+        // 格式已由 @Pattern 校验，这里只做类型转换
+        long itemId = Long.parseLong(request.itemId());
+        Long claimId = request.claimId() == null ? null : Long.valueOf(request.claimId());
+        Long clueId = request.clueId() == null ? null : Long.valueOf(request.clueId());
+        Map<String, Object> item = mapper.findItem(itemId);
         if (item == null) {
             throw new BusinessException(ErrorCode.REPORT_CONTEXT_INVALID, "被举报物品不存在");
         }
 
-        if (request.claimId() != null) {
-            Map<String, Object> claim = mapper.findClaim(request.claimId());
-            if (claim == null || Rows.num(claim, "item_id") != request.itemId()) {
+        if (claimId != null) {
+            Map<String, Object> claim = mapper.findClaim(claimId);
+            if (claim == null || Rows.num(claim, "item_id") != itemId) {
                 throw new BusinessException(ErrorCode.REPORT_CONTEXT_INVALID, "认领不属于该物品");
             }
             long applicant = Rows.num(claim, "applicant_id");
@@ -67,9 +71,9 @@ public class ReportService {
             if (userId != applicant && userId != publisher) {
                 throw new BusinessException(ErrorCode.REPORT_CONTEXT_INVALID, "只能举报自己参与的认领会话");
             }
-        } else if (request.clueId() != null) {
-            Map<String, Object> clue = mapper.findClue(request.clueId());
-            if (clue == null || Rows.num(clue, "lost_item_id") != request.itemId()) {
+        } else if (clueId != null) {
+            Map<String, Object> clue = mapper.findClue(clueId);
+            if (clue == null || Rows.num(clue, "lost_item_id") != itemId) {
                 throw new BusinessException(ErrorCode.REPORT_CONTEXT_INVALID, "线索不属于该物品");
             }
             long provider = Rows.num(clue, "provider_id");
@@ -83,9 +87,9 @@ public class ReportService {
 
         Map<String, Object> row = new HashMap<>();
         row.put("reporterId", userId);
-        row.put("itemId", request.itemId());
-        row.put("claimId", request.claimId());
-        row.put("clueId", request.clueId());
+        row.put("itemId", itemId);
+        row.put("claimId", claimId);
+        row.put("clueId", clueId);
         row.put("reason", reason);
         mapper.insertReport(row);
         long reportId = Rows.num(row, "id");
@@ -134,7 +138,7 @@ public class ReportService {
      * 只返回凭证正文与留言，不返回联系方式。
      */
     @Transactional
-    public Map<String, Object> conversation(long adminId, long reportId, int page, int pageSize) {
+    public ReportConversation conversation(long adminId, long reportId, int page, int pageSize) {
         Map<String, Object> report = requireReport(reportId);
         if (!STATUS_PENDING.equals(Rows.str(report, "status"))) {
             throw new BusinessException(ErrorCode.REPORT_STATE_CONFLICT);
@@ -175,29 +179,15 @@ public class ReportService {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "该举报没有关联会话");
         }
 
-        Map<String, Object> audit = new HashMap<>();
-        audit.put("reportId", reportId);
-        audit.put("adminId", adminId);
-        audit.put("requestId", RequestIdFilter.current());
-        mapper.insertAccessLog(audit);
+        Map<String, Object> accessLog = new HashMap<>();
+        accessLog.put("reportId", reportId);
+        accessLog.put("adminId", adminId);
+        accessLog.put("requestId", RequestIdFilter.current());
+        mapper.insertAccessLog(accessLog);
 
-        List<MessageView> items = new ArrayList<>();
-        for (Map<String, Object> row : rows) {
-            items.add(new MessageView(
-                    Rows.num(row, "id"),
-                    new UserBrief(Rows.num(row, "sender_id"), Rows.str(row, "sender_nickname")),
-                    Rows.str(row, "content"),
-                    Rows.time(row, "created_at")));
-        }
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("kind", kind);
-        result.put("contextId", contextId);
-        result.put("evidenceText", evidenceText);
-        result.put("items", items);
-        result.put("page", normalizedPage);
-        result.put("pageSize", normalizedSize);
-        result.put("total", total);
-        return result;
+        List<MessageView> items = rows.stream().map(ClaimMessageService::toView).toList();
+        return new ReportConversation(kind, Long.toString(contextId), evidenceText, items,
+                normalizedPage, normalizedSize, total);
     }
 
     /** 处理举报：业务处置与举报结论同一事务；任一步失败全部回滚。 */
@@ -295,16 +285,16 @@ public class ReportService {
 
     private static ReportView toView(Map<String, Object> row) {
         return new ReportView(
-                Rows.num(row, "id"),
-                Rows.num(row, "item_id"),
-                Rows.longOrNull(row, "claim_id"),
-                Rows.longOrNull(row, "clue_id"),
+                Rows.id(row, "id"),
+                Rows.id(row, "item_id"),
+                Rows.idOrNull(row, "claim_id"),
+                Rows.idOrNull(row, "clue_id"),
                 Rows.str(row, "reason"),
                 Rows.str(row, "status"),
                 Rows.str(row, "action"),
                 Rows.str(row, "resolution"),
                 Rows.num(row, "version"),
-                Rows.time(row, "created_at"),
-                Rows.time(row, "resolved_at"));
+                Rows.instant(row, "created_at"),
+                Rows.instant(row, "resolved_at"));
     }
 }

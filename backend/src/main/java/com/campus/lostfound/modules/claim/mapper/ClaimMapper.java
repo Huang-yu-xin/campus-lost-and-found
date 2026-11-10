@@ -62,10 +62,6 @@ public interface ClaimMapper {
             + "WHERE c.id = #{claimId}")
     Map<String, Object> findClaim(@Param("claimId") long claimId);
 
-    @Select("SELECT id, type, category, location, title, description, status, "
-            + "occurred_date, published_at, created_at FROM items WHERE id = #{itemId}")
-    Map<String, Object> findItemBrief(@Param("itemId") long itemId);
-
     /** 确认认领：条件更新，rowcount=0 表示状态已被他人改动。 */
     @Update("UPDATE claims SET status='CONFIRMED', confirmed_at=NOW(6), version=version+1 "
             + "WHERE id=#{claimId} AND status='PENDING'")
@@ -90,18 +86,6 @@ public interface ClaimMapper {
     @Update("UPDATE items SET status='ARCHIVED', closure_reason='HANDOVER', closed_at=NOW(6), version=version+1 "
             + "WHERE id=#{itemId} AND status='PUBLISHED' AND accepted_claim_id=#{claimId}")
     int archiveItemForClaim(@Param("itemId") long itemId, @Param("claimId") long claimId);
-
-    /** 发布者视角：自己发布的信息收到的全部认领申请。 */
-    @Select("SELECT c.id, c.item_id, c.publisher_id, c.applicant_id, c.description, "
-            + "c.status, c.reason, c.version, c.created_at, c.updated_at, "
-            + "ua.nickname AS applicant_nickname, up.nickname AS publisher_nickname, "
-            + "i.title AS item_title, i.status AS item_status "
-            + "FROM claims c "
-            + "JOIN users ua ON ua.id = c.applicant_id "
-            + "JOIN users up ON up.id = c.publisher_id "
-            + "JOIN items i ON i.id = c.item_id "
-            + "WHERE c.publisher_id = #{userId} ORDER BY c.created_at DESC, c.id DESC")
-    java.util.List<Map<String, Object>> listReceivedClaims(@Param("userId") long userId);
 
     /** 认领会话留言总数。 */
     @Select("SELECT COUNT(*) FROM claim_messages WHERE claim_id = #{claimId}")

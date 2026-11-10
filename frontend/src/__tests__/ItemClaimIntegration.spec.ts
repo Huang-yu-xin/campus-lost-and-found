@@ -77,10 +77,10 @@ describe('物品详情与认领页面衔接', () => {
   })
   it('从乙的物品详情提交认领后跳转到丙的私有详情', async () => {
     vi.mocked(createClaim).mockResolvedValue({
-      id: 7,
-      itemId: 42,
-      applicant: { id: 2, nickname: '申请人' },
-      publisher: { id: 1, nickname: '发布人' },
+      id: '7',
+      itemId: '42',
+      applicant: { id: '2', nickname: '申请人' },
+      publisher: { id: '1', nickname: '发布人' },
       description: '杯子底部有一张测试标签和编号',
       status: 'PENDING',
       reason: null,

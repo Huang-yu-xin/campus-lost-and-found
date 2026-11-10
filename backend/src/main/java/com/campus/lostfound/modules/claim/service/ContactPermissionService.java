@@ -6,11 +6,11 @@ import com.campus.lostfound.common.sql.Rows;
 import com.campus.lostfound.common.web.RequestIdFilter;
 import com.campus.lostfound.modules.claim.dto.ClaimDtos.ContactPermissionRequest;
 import com.campus.lostfound.modules.claim.dto.ClaimDtos.ContactPermissionView;
+import com.campus.lostfound.modules.claim.dto.ClaimDtos.CounterpartyContactView;
 import com.campus.lostfound.modules.claim.mapper.ClaimMapper;
 import com.campus.lostfound.modules.claim.mapper.ContactPermissionMapper;
 import com.campus.lostfound.modules.item.service.ItemStateLocks;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -41,16 +41,17 @@ public class ContactPermissionService {
         Map<String, Object> claim = requireParticipant(userId, claimId);
         Map<String, Object> row = mapper.find(claimId, userId);
         boolean effective = isEffective(claim);
+        String id = Long.toString(claimId);
         if (row == null) {
-            return new ContactPermissionView(claimId, false, false, effective, 0L, null);
+            return new ContactPermissionView(id, false, false, effective, 0L, null);
         }
         return new ContactPermissionView(
-                claimId,
+                id,
                 Rows.bool(row, "phone_visible"),
                 Rows.bool(row, "email_visible"),
                 effective,
                 Rows.num(row, "version"),
-                Rows.time(row, "updated_at"));
+                Rows.instant(row, "updated_at"));
     }
 
     /** 设置或撤回自己的授权；两字段都 false 表示撤回。 */
@@ -101,7 +102,7 @@ public class ContactPermissionService {
 
     /** 查询对方已授权的联系方式；未授权字段不返回。 */
     @Transactional(readOnly = true)
-    public Map<String, Object> getCounterparty(long userId, long claimId) {
+    public CounterpartyContactView getCounterparty(long userId, long claimId) {
         Map<String, Object> claim = requireParticipant(userId, claimId);
         if (!isEffective(claim)) {
             throw new BusinessException(ErrorCode.CONTACT_NOT_ACTIVE);
@@ -116,19 +117,13 @@ public class ContactPermissionService {
         }
 
         Map<String, Object> contact = mapper.findUserContact(otherId);
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("claimId", claimId);
-        if (phoneVisible && contact != null && !blank(Rows.str(contact, "phone"))) {
-            result.put("phone", Rows.str(contact, "phone"));
-        }
-        if (emailVisible && contact != null && !blank(Rows.str(contact, "email"))) {
-            result.put("email", Rows.str(contact, "email"));
-        }
-        if (result.size() == 1) {
+        String phone = phoneVisible && contact != null ? present(Rows.str(contact, "phone")) : null;
+        String email = emailVisible && contact != null ? present(Rows.str(contact, "email")) : null;
+        if (phone == null && email == null) {
             // 授权开关还在，但对方删除了字段或字段为空，等同于没有可用联系方式
             throw new BusinessException(ErrorCode.CONTACT_NOT_AUTHORIZED);
         }
-        return result;
+        return new CounterpartyContactView(Long.toString(claimId), phone, email);
     }
 
     /**
@@ -196,5 +191,9 @@ public class ContactPermissionService {
 
     private static boolean blank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private static String present(String value) {
+        return blank(value) ? null : value;
     }
 }
