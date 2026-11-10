@@ -29,11 +29,11 @@ public class ModerationService {
         this.images = images;
     }
 
-    /** 待审核列表；status 仅允许 PENDING_REVIEW / RETURNED。 */
+    /** 管理列表包括待审核、已退回及可直接下架的已发布信息。 */
     public List<Map<String, Object>> list(String status) {
         String s = status == null || status.isBlank() ? "PENDING_REVIEW" : status.trim().toUpperCase();
-        if (!"PENDING_REVIEW".equals(s) && !"RETURNED".equals(s)) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "status 只支持 PENDING_REVIEW / RETURNED");
+        if (!java.util.Set.of("PENDING_REVIEW", "RETURNED", "PUBLISHED").contains(s)) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "status 只支持 PENDING_REVIEW / RETURNED / PUBLISHED");
         }
         List<Map<String, Object>> result = new ArrayList<>();
         for (Map<String, Object> r : mapper.listByStatus(s)) {

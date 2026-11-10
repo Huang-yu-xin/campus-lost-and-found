@@ -134,6 +134,23 @@ class AbcWorkflowIntegrationTest {
                 .andExpect(jsonPath("$.data.total").value(12));
     }
 
+    @Test void adminCanFindPublishedItemsAndTakeDownWithVersionProtection() throws Exception {
+        String item = publish("LOST"); approve(item);
+        var clue = clues.create(applicant, Long.parseLong(item), "服务台曾经收到过这样的一件物品");
+        mvc.perform(get("/api/v1/admin/items").param("status", "PUBLISHED").session(ownerSession))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/admin/items").param("status", "PUBLISHED").session(adminSession))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data[?(@.id == " + item + ")]").isNotEmpty());
+        send(adminSession, post("/api/v1/admin/items/" + item + "/take-down"), Map.of("expectedVersion", 1, "reason", "信息有误"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("VERSION_CONFLICT"));
+        send(adminSession, post("/api/v1/admin/items/" + item + "/take-down"), Map.of("expectedVersion", 2, "reason", "信息有误"))
+                .andExpect(status().isOk());
+        send(applicantSession, post("/api/v1/clues/" + clue.id() + "/messages"), Map.of("content", "下架后消息"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CONVERSATION_CLOSED"));
+        mvc.perform(get("/api/v1/items/" + item)).andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/clues/" + clue.id()).session(applicantSession)).andExpect(status().isOk());
+    }
+
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void sendingClueRacingArchiveCannotLeaveMessagesAfterClosure() throws Exception {

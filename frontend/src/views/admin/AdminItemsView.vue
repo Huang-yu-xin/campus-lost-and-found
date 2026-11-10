@@ -32,7 +32,7 @@ const rows = ref<AdminItem[]>([])
 const loading = ref(true)
 const actingId = ref<number | null>(null)
 const errorText = ref('')
-const status = ref<'PENDING_REVIEW' | 'RETURNED'>('PENDING_REVIEW')
+const status = ref<'PENDING_REVIEW' | 'RETURNED' | 'PUBLISHED'>('PENDING_REVIEW')
 const detailVisible = ref(false)
 const detailLoading = ref(false)
 const selectedItem = ref<AdminItemDetail | null>(null)
@@ -102,15 +102,41 @@ async function showDetail(rawRow: unknown) {
 }
 
 onMounted(load)
+async function takeDown(rawRow: unknown) {
+  const row = rawRow as AdminItem
+  if (actingId.value) return
+  actingId.value = row.id
+  try {
+    const { value } = await ElMessageBox.prompt(
+      '请填写下架原因（1～500 字，发布者可见）',
+      '下架信息',
+      {
+        inputValidator: (v: string) =>
+          (!!v?.trim() && v.trim().length <= 500) || '请填写 1～500 字的原因',
+      },
+    )
+    await http.post(`/admin/items/${row.id}/take-down`, {
+      expectedVersion: row.version,
+      reason: value.trim(),
+    })
+    ElMessage.success('已下架，相关会话停止新增留言')
+    await load()
+  } catch (e) {
+    if (e !== 'cancel' && e !== 'close') ElMessage.error(describeError(e))
+  } finally {
+    actingId.value = null
+  }
+}
 </script>
 
 <template>
   <section class="admin-items">
     <div class="head">
-      <h1>信息审核</h1>
+      <h1>信息管理</h1>
       <el-radio-group v-model="status" @change="load">
         <el-radio-button label="PENDING_REVIEW">待审核</el-radio-button>
         <el-radio-button label="RETURNED">已退回</el-radio-button>
+        <el-radio-button value="PUBLISHED">已发布</el-radio-button>
       </el-radio-group>
     </div>
 
@@ -147,6 +173,14 @@ onMounted(load)
               >退回</el-button
             >
           </template>
+          <el-button
+            v-else-if="status === 'PUBLISHED'"
+            link
+            type="danger"
+            :disabled="!!actingId"
+            @click="takeDown(row)"
+            >下架</el-button
+          >
           <span v-else class="muted">已退回，等待发布者修改</span>
         </template>
       </el-table-column>
