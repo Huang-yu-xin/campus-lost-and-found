@@ -22,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 /** 线索仅对提供者及发布人可见；所有写入与物品归档、下架共用同一行锁。 */
 @Service
 public class ClueService {
+    private static final java.util.regex.Pattern CONTACT = java.util.regex.Pattern.compile(
+            "(?i)(?<![0-9])1[3-9][0-9]{9}(?![0-9])|[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}"
+            + "|(?:微信|wechat|wx|qq)\\s*[:：]?\\s*[a-z0-9_-]{5,}");
     public record Clue(String id, String lostItemId, Publisher provider, Publisher publisher,
             String content, Instant createdAt) {}
     public record Detail(Clue clue, ItemRecord item) {}
@@ -119,6 +122,8 @@ public class ClueService {
         int length = text.codePointCount(0, text.length());
         if (length < min || length > max) throw new BusinessException(ErrorCode.VALIDATION_ERROR,
                 "内容需为 " + min + "～" + max + " 字");
+        if (CONTACT.matcher(text).find()) throw new BusinessException(ErrorCode.VALIDATION_ERROR,
+                "请勿在线索或留言中填写手机号、邮箱或社交账号");
         return text;
     }
     private static Publisher user(Map<String, Object> row, String prefix) {

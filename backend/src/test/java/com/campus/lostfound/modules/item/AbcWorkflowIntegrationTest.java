@@ -95,10 +95,16 @@ class AbcWorkflowIntegrationTest {
         approve(item);
         send(ownerSession, post("/api/v1/items/" + item + "/clues"), Map.of("content", "我在图书馆服务台看到相似物品"))
                 .andExpect(status().isForbidden());
+        for (String contact: List.of("请打电话联系我13900001111", "请邮件联系我student@example.test", "请通过微信:testaccount联系")) {
+            send(applicantSession, post("/api/v1/items/" + item + "/clues"), Map.of("content",contact))
+                    .andExpect(status().isBadRequest());
+        }
         String result = send(applicantSession, post("/api/v1/items/" + item + "/clues"),
                 Map.of("content", "我在图书馆服务台看到相似物品"))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         String clue = JsonPath.read(result, "$.data.id");
+        send(applicantSession, post("/api/v1/clues/" + clue + "/messages"), Map.of("content","student@example.test"))
+                .andExpect(status().isBadRequest());
         send(applicantSession, post("/api/v1/items/" + item + "/clues"), Map.of("content", "我又补充了一条相同物品的线索"))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CLUE_ALREADY_EXISTS"));
         mvc.perform(get("/api/v1/clues/" + clue).session(otherSession)).andExpect(status().isNotFound());
