@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.campus.lostfound.modules.item.mapper.ItemMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO items (publisher_id, type, category, location, occurred_date, title, description, status)
+        VALUES (#{publisherId}, #{request.type}, #{request.category}, #{request.location},
+                #{request.occurredDate}, #{request.title}, #{request.description}, 'PENDING_REVIEW')
+    </insert>
+
+    <insert id="insertOnce">
+        INSERT INTO items (publisher_id, type, category, location, occurred_date, title, description, status,
+                           submission_key, submission_hash)
+        VALUES (#{item.publisherId}, #{item.request.type}, #{item.request.category}, #{item.request.location},
+                #{item.request.occurredDate}, #{item.request.title}, #{item.request.description}, 'PENDING_REVIEW',
+                #{submissionKey}, #{submissionHash})
+        ON DUPLICATE KEY UPDATE id = id
+    </insert>
+
+    <select id="findSubmission" resultType="com.campus.lostfound.modules.item.mapper.ItemMapper$Submission">
+        SELECT id AS item_id, submission_hash
+        FROM items
+        WHERE publisher_id = #{publisherId} AND submission_key = #{submissionKey}
+        FOR UPDATE
+    </select>
+
+    <sql id="itemColumns">
+        i.id, i.publisher_id, u.nickname, i.type, i.category, i.location, i.occurred_date, i.title,
+        i.description, i.status, i.version, i.review_reason, i.closure_reason,
+        i.published_at, i.created_at, i.updated_at,
+        EXISTS(SELECT 1 FROM claims c WHERE c.id = i.accepted_claim_id AND c.status = 'CONFIRMED')
+            AS has_confirmed_claim
+    </sql>
+
+    <sql id="publishedFilters">
+        i.status = 'PUBLISHED'
+        <if test="search.type != null">AND i.type = #{search.type}</if>
+        <if test="search.category != null">AND i.category = #{search.category}</if>
+        <if test="search.location != null">AND LOCATE(#{search.location}, i.location) &gt; 0</if>
+        <if test="search.keyword != null">
+            AND (LOCATE(#{search.keyword}, i.title) &gt; 0 OR LOCATE(#{search.keyword}, i.description) &gt; 0)
+        </if>
+        <if test="search.dateFrom != null">AND i.occurred_date &gt;= #{search.dateFrom}</if>
+        <if test="search.dateTo != null">AND i.occurred_date &lt;= #{search.dateTo}</if>
+    </sql>
+
+    <select id="findOwn" resultType="com.campus.lostfound.modules.item.mapper.ItemRow">
+        SELECT <include refid="itemColumns"/>
+        FROM items i JOIN users u ON u.id = i.publisher_id
+        WHERE i.id = #{id} AND i.publisher_id = #{publisherId}
+    </select>
+
+    <select id="findPublished" resultType="com.campus.lostfound.modules.item.mapper.ItemRow">
+        SELECT <include refid="itemColumns"/>
+        FROM items i JOIN users u ON u.id = i.publisher_id
+        WHERE i.id = #{id} AND i.status = 'PUBLISHED'
+    </select>
+
+    <select id="countPublished" resultType="long">
+        SELECT COUNT(*) FROM items i WHERE <include refid="publishedFilters"/>
+    </select>
+
+    <select id="listPublished" resultType="com.campus.lostfound.modules.item.mapper.ItemRow">
+        SELECT <include refid="itemColumns"/>
+        FROM items i JOIN users u ON u.id = i.publisher_id
+        WHERE <include refid="publishedFilters"/>
+        ORDER BY i.published_at DESC, i.id DESC
+        LIMIT #{search.pageSize} OFFSET #{offset}
+    </select>
+    <select id="lockOwnId" resultType="java.lang.Long">
+        SELECT id FROM items WHERE id=#{id} AND publisher_id=#{publisherId} FOR UPDATE
+    </select>
+    <sql id="ownFilters">
+        i.publisher_id=#{publisherId}
+        <if test="search.status != null">AND i.status=#{search.status}</if>
+    </sql>
+    <select id="countOwn" resultType="long">
+        SELECT COUNT(*) FROM items i WHERE <include refid="ownFilters"/>
+    </select>
+    <select id="listOwn" resultType="com.campus.lostfound.modules.item.mapper.ItemRow">
+        SELECT <include refid="itemColumns"/> FROM items i JOIN users u ON u.id=i.publisher_id
+        WHERE <include refid="ownFilters"/> ORDER BY i.created_at DESC, i.id DESC
+        LIMIT #{search.pageSize} OFFSET #{offset}
+    </select>
+    <select id="hasBlockingHistory" resultType="boolean">
+        SELECT EXISTS(SELECT 1 FROM claims WHERE item_id=#{id} AND status&lt;&gt;'REJECTED')
+            OR EXISTS(SELECT 1 FROM clues WHERE lost_item_id=#{id})
+    </select>
+    <select id="hasConfirmedClaim" resultType="boolean">
+        SELECT EXISTS(SELECT 1 FROM claims WHERE item_id=#{id} AND status IN ('CONFIRMED','COMPLETED'))
+    </select>
+    <update id="edit">
+        UPDATE items SET category=#{request.category}, location=#{request.location},
+            occurred_date=#{request.occurredDate}, title=#{request.title}, description=#{request.description},
+            status='PENDING_REVIEW', review_reason=NULL, published_at=NULL, version=version+1
+        WHERE id=#{id} AND version=#{version}
+    </update>
+    <update id="withdraw">
+        UPDATE items SET status='OFF_SHELF', closure_reason='OWNER_WITHDRAWN', closed_at=UTC_TIMESTAMP(6),
+            version=version+1 WHERE id=#{id} AND version=#{version}
+    </update>
+    <update id="closePendingClaims">
+        UPDATE claims SET status='CLOSED', reason='发布人已下架物品', version=version+1
+        WHERE item_id=#{id} AND status='PENDING'
+    </update>
+</mapper>

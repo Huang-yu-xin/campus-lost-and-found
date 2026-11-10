@@ -145,6 +145,7 @@ SHOW DATABASES LIKE 'campus_lost_found';
 SOURCE database/000_create_database.sql;
 USE campus_lost_found;
 SOURCE database/migrations/V001__core_schema.sql;
+SOURCE database/migrations/V003__item_submission_key.sql;
 SOURCE database/seeds/S001__mock_students.sql;
 
 CREATE USER 'lostfound_app'@'localhost' IDENTIFIED BY '你的密码';

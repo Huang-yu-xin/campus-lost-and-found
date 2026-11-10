@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.campus.lostfound.modules.item.mapper.ImageMapper">
+    <sql id="columns">id, uploader_id, item_id, storage_key, media_type, size_bytes</sql>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO images (uploader_id, storage_key, media_type, size_bytes)
+        VALUES (#{uploaderId}, #{storageKey}, #{mediaType}, #{sizeBytes})
+    </insert>
+    <select id="find" resultType="com.campus.lostfound.modules.item.mapper.ImageMapper$ImageRow">
+        SELECT <include refid="columns"/> FROM images WHERE id=#{id}
+    </select>
+    <select id="lock" resultType="com.campus.lostfound.modules.item.mapper.ImageMapper$ImageRow">
+        SELECT <include refid="columns"/> FROM images WHERE id=#{id} FOR UPDATE
+    </select>
+    <select id="canRead" resultType="boolean">
+        SELECT EXISTS(
+            SELECT 1 FROM images g LEFT JOIN items i ON i.id=g.item_id
+            WHERE g.id=#{id} AND (
+                (g.item_id IS NULL AND g.uploader_id=#{userId})
+                OR (g.item_id IS NOT NULL AND (
+                    i.status='PUBLISHED' OR i.publisher_id=#{userId} OR #{admin}
+                    OR EXISTS(SELECT 1 FROM claims c WHERE c.item_id=i.id AND c.applicant_id=#{userId})
+                    OR EXISTS(SELECT 1 FROM clues c WHERE c.lost_item_id=i.id AND c.provider_id=#{userId})
+                ))
+            )
+        )
+    </select>
+    <select id="forItems" resultType="com.campus.lostfound.modules.item.mapper.ImageMapper$ImageRow">
+        SELECT <include refid="columns"/> FROM images WHERE item_id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+        ORDER BY item_id, position
+    </select>
+    <update id="detach">UPDATE images SET item_id=NULL, position=NULL WHERE item_id=#{itemId}</update>
+    <update id="bind">UPDATE images SET item_id=#{itemId}, position=#{position} WHERE id=#{id}</update>
+</mapper>

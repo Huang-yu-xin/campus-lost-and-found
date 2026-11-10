@@ -21,6 +21,30 @@ const router = createRouter({
       component: StudentLayout,
       children: [
         { path: '', name: 'home', component: () => import('@/views/HomeView.vue') },
+        { path: 'items', name: 'items', component: () => import('@/views/item/ItemListView.vue') },
+        {
+          path: 'items/new',
+          name: 'item-publish',
+          component: () => import('@/views/item/ItemPublishView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'me/items',
+          name: 'my-items',
+          component: () => import('@/views/item/MyItemsView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'me/items/:itemId/edit',
+          name: 'item-edit',
+          component: () => import('@/views/item/ItemPublishView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'items/:itemId',
+          name: 'item-detail',
+          component: () => import('@/views/item/ItemDetailView.vue'),
+        },
         { path: 'login', name: 'login', component: () => import('@/views/account/LoginView.vue') },
         {
           path: 'register',

@@ -780,7 +780,7 @@ paths:
     post:
       operationId: uploadImage
       summary: 上传物品图片
-      description: 按文件内容检查 JPG/PNG，不信任扩展名；最大 2097152 字节。产生仅上传者可访问的未绑定图片，发布时最多绑定 3 张。临时文件清理不构成用户删除接口。
+      description: 按文件内容检测并解码 JPG/PNG，不信任扩展名；最大 2097152 字节、1600 万像素。产生仅上传者可访问的未绑定图片，发布时最多绑定 3 张。上传回滚时清理文件，未绑定文件的定期清理尚待实现，不提供用户删除接口。
       tags:
       - 发布与查找
       parameters:
@@ -880,11 +880,19 @@ paths:
     post:
       operationId: createItem
       summary: 发布物品信息
-      description: 作者取自当前会话。状态 PENDING_REVIEW，version=1；验证图片归属和唯一绑定、日期及文本。
+      description: 作者取自当前会话。新记录状态 PENDING_REVIEW，version=1。带同一提交编号重试相同内容时返回已有物品及当前状态，编号相同而内容不同时返回 409 ITEM_SUBMISSION_CONFLICT。
       tags:
       - 发布与查找
       parameters:
       - $ref: '#/components/parameters/CsrfHeader'
+      - name: Idempotency-Key
+        in: header
+        required: false
+        description: 每次新发布使用新的小写 UUID，同次提交重试沿用原值。编号按发布人隔离。
+        schema:
+          type: string
+          format: uuid
+          pattern: '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$'
       security:
       - SessionAuth: []
       responses:
@@ -1041,7 +1049,7 @@ paths:
     patch:
       operationId: editItem
       summary: 编辑并重新提交审核
-      description: 仅本人；允许 PENDING_REVIEW、RETURNED、PUBLISHED。FOUND 存在任何认领历史、LOST 存在任何线索历史时禁止编辑（草案）。成功重回待审核，公共接口立即不可见；已下架、归档不能编辑。
+      description: 仅本人；允许 PENDING_REVIEW、RETURNED、PUBLISHED。按乙已审定需求，FOUND 无认领或认领全部 REJECTED 时允许编辑，其他认领历史禁止编辑；LOST 有线索历史禁止编辑。成功重回待审核，公共接口立即不可见；类型不可改，已下架、归档不能编辑。甲丙联调时须采用同一规则。
       tags:
       - 发布与查找
       parameters:
