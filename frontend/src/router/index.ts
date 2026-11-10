@@ -21,18 +21,18 @@ const router = createRouter({
       component: StudentLayout,
       children: [
         { path: '', name: 'home', component: () => import('@/views/HomeView.vue') },
+        {
+          path: 'claims',
+          name: 'claim-received',
+          component: () => import('@/views/claim/ClaimListView.vue'),
+        },
+        // 认领详情：不设 requiresAuth，未登录时由页面自行提示（后端仍会返回 401）
+        {
+          path: 'claims/:claimId',
+          name: 'claim-detail',
+          component: () => import('@/views/claim/ClaimDetailView.vue'),
+        },
         { path: 'login', name: 'login', component: () => import('@/views/account/LoginView.vue') },
-        {
-          path: 'register',
-          name: 'register',
-          component: () => import('@/views/account/RegisterView.vue'),
-        },
-        {
-          path: 'me/profile',
-          name: 'profile',
-          component: () => import('@/views/personal/ProfileView.vue'),
-          meta: { requiresAuth: true },
-        },
       ],
     },
     {
@@ -44,6 +44,11 @@ const router = createRouter({
           path: '',
           name: 'admin-home',
           component: () => import('@/views/admin/AdminHomeView.vue'),
+        },
+        {
+          path: 'items',
+          name: 'admin-items',
+          component: () => import('@/views/admin/AdminItemsView.vue'),
         },
       ],
     },
@@ -65,9 +70,6 @@ router.beforeEach(async (to) => {
   }
   if (to.meta.requiresAuth && !auth.isLoggedIn) {
     return { name: 'login', query: { redirect: to.fullPath } }
-  }
-  if ((to.name === 'login' || to.name === 'register') && auth.isLoggedIn) {
-    return { name: 'home' }
   }
   if (to.meta.requiresAdmin && !auth.isAdmin) {
     return { name: 'home' }

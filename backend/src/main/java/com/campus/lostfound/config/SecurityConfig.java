@@ -1,9 +1,7 @@
 package com.campus.lostfound.config;
 
 import com.campus.lostfound.common.security.SecurityErrorHandler;
-import com.campus.lostfound.modules.account.mapper.UserMapper;
-import com.campus.lostfound.modules.account.security.AuthVersionFilter;
-import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -11,16 +9,6 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
-import org.springframework.security.web.authentication.session.ChangeSessionIdAuthenticationStrategy;
-import org.springframework.security.web.authentication.session.CompositeSessionAuthenticationStrategy;
-import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
-import org.springframework.security.web.context.DelegatingSecurityContextRepository;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
-import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
-import org.springframework.security.web.context.SecurityContextRepository;
-import org.springframework.security.web.csrf.CsrfAuthenticationStrategy;
-import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 import org.springframework.security.web.savedrequest.NullRequestCache;
 import tools.jackson.databind.ObjectMapper;
@@ -28,6 +16,7 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * 服务端 Session + CSRF。默认所有接口需要登录；
  * 合同中的公共 GET 接口由各模块负责人在开发时逐条加入 permitAll，不整体放开。
+ * 登录、退出、改密使会话失效等由账号模块在此基础上补充。
  */
 @Configuration
 @EnableMethodSecurity
@@ -37,55 +26,40 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectMapper objectMapper,
-            CsrfTokenRepository csrfTokenRepository, SecurityContextRepository securityContextRepository,
-            UserMapper userMapper) throws Exception {
+            @Value("${app.dev-login-enabled:false}") boolean devLoginEnabled) throws Exception {
         SecurityErrorHandler errorHandler = new SecurityErrorHandler(objectMapper);
+        HttpSessionCsrfTokenRepository csrfTokenRepository = new HttpSessionCsrfTokenRepository();
+        csrfTokenRepository.setHeaderName(CSRF_HEADER);
 
         http
-                .csrf(csrf -> csrf.csrfTokenRepository(csrfTokenRepository))
-                .securityContext(context -> context.securityContextRepository(securityContextRepository))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.GET, "/api/v1/auth/csrf").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/email-codes",
-                                "/api/v1/auth/register").permitAll()
-                        // springdoc 仅在 dev 配置中开启，其他环境这些路径不存在
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers("/error").permitAll()
-                        .anyRequest().authenticated())
+                .csrf(csrf -> {
+                    csrf.csrfTokenRepository(csrfTokenRepository);
+                    // 临时：开发期登录接口不校验 CSRF，关闭开关后此分支不执行
+                    if (devLoginEnabled) {
+                        csrf.ignoringRequestMatchers("/api/v1/dev/**");
+                    }
+                })
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(HttpMethod.GET, "/api/v1/auth/csrf").permitAll();
+                    // 临时：开发期登录放行，关闭开关后此分支不执行
+                    if (devLoginEnabled) {
+                        auth.requestMatchers("/api/v1/dev/**").permitAll();
+                    }
+                    // springdoc 仅在 dev 配置中开启，其他环境这些路径不存在
+                    auth.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
+                    // 接口调试页：只是静态外壳，数据仍由 /v3/api-docs 提供，不含任何业务数据
+                    auth.requestMatchers("/api.html", "/favicon.ico").permitAll();
+                    auth.requestMatchers("/error").permitAll();
+                    auth.anyRequest().authenticated();
+                })
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(errorHandler)
                         .accessDeniedHandler(errorHandler))
-                // 改密等使认证版本变化后，旧会话在这里被识别并按未登录处理
-                .addFilterBefore(new AuthVersionFilter(userMapper), AnonymousAuthenticationFilter.class)
-                // 纯 JSON 接口：不做登录跳转、不缓存请求；登录与退出由 AuthController 处理
+                // 纯 JSON 接口：不做登录跳转、不缓存请求、不使用默认表单和 Basic 认证
                 .requestCache(cache -> cache.requestCache(new NullRequestCache()))
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable);
         return http.build();
-    }
-
-    /** CSRF 令牌存在 Session 中；登录、退出时由 AuthService 更新或清除。 */
-    @Bean
-    CsrfTokenRepository csrfTokenRepository() {
-        HttpSessionCsrfTokenRepository repository = new HttpSessionCsrfTokenRepository();
-        repository.setHeaderName(CSRF_HEADER);
-        return repository;
-    }
-
-    /** 登录后把 SecurityContext 保存到 Session，后续请求从这里读取登录状态。 */
-    @Bean
-    SecurityContextRepository securityContextRepository() {
-        return new DelegatingSecurityContextRepository(
-                new RequestAttributeSecurityContextRepository(),
-                new HttpSessionSecurityContextRepository());
-    }
-
-    /** 登录成功时：轮换 Session ID（防会话固定攻击），并作废旧 CSRF 令牌。 */
-    @Bean
-    SessionAuthenticationStrategy sessionAuthenticationStrategy(CsrfTokenRepository csrfTokenRepository) {
-        return new CompositeSessionAuthenticationStrategy(List.of(
-                new ChangeSessionIdAuthenticationStrategy(),
-                new CsrfAuthenticationStrategy(csrfTokenRepository)));
     }
 }
