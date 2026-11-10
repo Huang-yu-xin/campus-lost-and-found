@@ -4,7 +4,7 @@ import java.time.Duration;
 
 /**
  * 发送验证码邮件。开发环境用 DevFileEmailSender 写入本机收件箱（模拟发送）；
- * 需要真实发送时新增 SMTP 实现并在 MailConfig 中切换，业务代码不用改。
+ * SMTP 模式使用配置的邮件服务。
  * 实现类不得把验证码写进普通日志。
  */
 public interface EmailSender {

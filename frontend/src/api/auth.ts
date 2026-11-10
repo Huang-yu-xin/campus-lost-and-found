@@ -12,6 +12,7 @@ export interface LoginRequest {
 }
 
 export interface CodeSentData {
+  deliveryMode: 'DEV_FILE' | 'SMTP'
   expiresInSeconds: number
   /** 再次发送前需等待的秒数。 */
   retryAfterSeconds: number

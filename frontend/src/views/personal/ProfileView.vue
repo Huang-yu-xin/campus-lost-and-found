@@ -140,7 +140,11 @@ async function sendEmailCode() {
   try {
     const result = await sendChangeEmailCode(emailForm.email.trim())
     startCountdown(result.retryAfterSeconds)
-    ElMessage.success('验证码已发送到新邮箱（模拟发送）')
+    ElMessage.success(
+      result.deliveryMode === 'DEV_FILE'
+        ? '验证码已模拟发送，请查看开发收件箱'
+        : '验证码已发送到新邮箱',
+    )
   } catch (error) {
     emailError.value = describeError(error)
   } finally {

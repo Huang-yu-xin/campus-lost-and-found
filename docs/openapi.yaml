@@ -2838,6 +2838,10 @@ components:
       description: ''
       additionalProperties: false
       properties:
+        deliveryMode:
+          type: string
+          description: DEV_FILE 为模拟发送到开发收件箱；SMTP 为已提交给邮件服务。
+          enum: [DEV_FILE, SMTP]
         expiresInSeconds:
           type: integer
           description: 有效期。
@@ -2851,6 +2855,7 @@ components:
       required:
       - expiresInSeconds
       - retryAfterSeconds
+      - deliveryMode
     RegisterRequest:
       type: object
       description: ''

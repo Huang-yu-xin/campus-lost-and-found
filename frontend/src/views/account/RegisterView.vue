@@ -98,7 +98,11 @@ async function sendCode() {
   try {
     const result = await sendRegistrationCode(form.email.trim())
     startCountdown(result.retryAfterSeconds)
-    ElMessage.success('验证码已发送（模拟发送）')
+    ElMessage.success(
+      result.deliveryMode === 'DEV_FILE'
+        ? '验证码已模拟发送，请查看开发收件箱'
+        : '验证码已发送，请查看邮箱',
+    )
   } catch (error) {
     errorMessage.value = describeError(error)
   } finally {
@@ -140,7 +144,7 @@ onBeforeUnmount(() => clearInterval(timer))
     <el-card shadow="never" class="register-card">
       <h1>注册</h1>
       <el-alert
-        title="演示环境：身份信息需与虚拟名册一致；验证码为模拟发送，不会真的发到邮箱，请到后端开发收件箱 runtime/dev-mail 查看。"
+        title="身份信息需与学校名册一致。获取验证码后按提示查看邮箱；开发环境使用模拟发送时，请查看后端开发收件箱。"
         type="info"
         :closable="false"
         class="notice"

@@ -218,7 +218,30 @@ npm.cmd run test:unit -- --run
 npm.cmd run build
 ```
 
-常见问题：
+### 真实发送邮箱验证码
+
+默认 `dev-file` 模式把验证码写入后端开发收件箱，用于本地联调。真实发邮件时，在不提交 Git 的 `backend/config/application.yml` 中配置邮件服务商提供的 SMTP 信息：
+
+```yaml
+spring:
+  mail:
+    host: 你的SMTP服务器
+    port: 587
+    username: 你的发件邮箱
+    password: 你的SMTP授权码
+    properties:
+      "[mail.smtp.auth]": true
+      "[mail.smtp.starttls.enable]": true
+      "[mail.smtp.starttls.required]": true
+app:
+  mail:
+    mode: smtp
+    from: 你的发件邮箱
+```
+
+以上是 587 端口的 STARTTLS 示例。服务商要求 465 时，改为 `port: 465`、`mail.smtp.ssl.enable: true`，删去两个 STARTTLS 配置。重启后端后生效；页面会按实际模式提示“模拟发送”或“已发送”。连接、读取、写入默认均有 5 秒超时，SMTP 拒绝或超时会返回失败，验证码写入随事务回滚。是否实际进入收件箱，还需使用自己的邮件服务账号验证。
+
+### 常见问题
 
 | 现象 | 原因 |
 | --- | --- |

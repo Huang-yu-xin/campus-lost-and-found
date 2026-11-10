@@ -39,6 +39,7 @@ public class VerificationCodeService {
     private final Clock clock;
     private final AppProperties.Verification config;
     private final SecretKeySpec hmacKey;
+    private final String deliveryMode;
 
     public VerificationCodeService(EmailCodeMapper emailCodeMapper, EmailSender emailSender, Clock clock,
             AppProperties properties) {
@@ -46,6 +47,7 @@ public class VerificationCodeService {
         this.emailSender = emailSender;
         this.clock = clock;
         this.config = properties.verification();
+        this.deliveryMode = properties.mail().mode().name();
         this.hmacKey = new SecretKeySpec(config.hmacKey().getBytes(StandardCharsets.UTF_8), HMAC_ALGORITHM);
     }
 
@@ -82,7 +84,7 @@ public class VerificationCodeService {
         }
         // 发送失败时抛出异常，本次写入随事务回滚
         emailSender.sendVerificationCode(email, purpose.label(), code, config.codeTtl());
-        return new CodeSentData(config.codeTtl().toSeconds(), config.resendInterval().toSeconds());
+        return new CodeSentData(config.codeTtl().toSeconds(), config.resendInterval().toSeconds(), deliveryMode);
     }
 
     /**
