@@ -53,6 +53,7 @@ const router = createRouter({
         },
         {
           path: 'claims',
+          alias: 'me/received-claims',
           name: 'claim-received',
           component: () => import('@/views/claim/ClaimListView.vue'),
           meta: { requiresAuth: true },
