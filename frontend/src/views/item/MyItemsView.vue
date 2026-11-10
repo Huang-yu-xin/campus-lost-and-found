@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { describeError } from '@/api/feedback'
 import { listOwnItems, withdrawItem, type ItemRecord } from '@/api/items'
-import { ITEM_STATUS_LABELS } from '@/types/domain'
+import { ITEM_STATUS_LABELS, type ItemStatus } from '@/types/domain'
 import { resolveLostItem } from '@/api/clues'
 
 const items = ref<ItemRecord[]>([])
@@ -12,11 +12,12 @@ const total = ref(0)
 const loading = ref(false)
 const busyId = ref('')
 const errorMessage = ref('')
+const statusFilter = ref<ItemStatus | ''>('')
 async function load() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const result = await listOwnItems(page.value)
+    const result = await listOwnItems(page.value, statusFilter.value || undefined)
     items.value = result.items
     total.value = result.total
   } catch (error) {
@@ -47,6 +48,11 @@ async function withdraw(item: ItemRecord) {
   }
 }
 onMounted(load)
+// 切换状态后回到第一页，避免停留在超出新结果范围的页码
+watch(statusFilter, () => {
+  page.value = 1
+  void load()
+})
 async function resolve(item: ItemRecord) {
   if (busyId.value) return
   busyId.value = item.id
@@ -67,9 +73,28 @@ async function resolve(item: ItemRecord) {
     <h1>我的发布</h1>
     <p>修改信息后需要重新审核。有待确认或已确认认领时不能修改。</p>
     <el-alert v-if="errorMessage" :title="errorMessage" type="error" :closable="false" />
-    <el-button :disabled="loading || !!busyId" @click="load">刷新列表</el-button>
+    <div class="toolbar">
+      <el-select
+        v-model="statusFilter"
+        placeholder="全部状态"
+        clearable
+        aria-label="按状态筛选"
+        :disabled="loading || !!busyId"
+        style="width: 180px"
+      >
+        <el-option
+          v-for="(text, value) in ITEM_STATUS_LABELS"
+          :key="value"
+          :value="value"
+          :label="text"
+        />
+      </el-select>
+      <el-button :disabled="loading || !!busyId" @click="load">刷新列表</el-button>
+    </div>
     <p v-if="loading" role="status">正在加载…</p>
-    <p v-else-if="!items.length">暂无发布记录。</p>
+    <p v-else-if="!items.length">
+      {{ statusFilter ? `暂无${ITEM_STATUS_LABELS[statusFilter]}的发布记录。` : '暂无发布记录。' }}
+    </p>
     <article v-for="item in items" :key="item.id">
       <h2>{{ item.title }}</h2>
       <p>编号 {{ item.id }} · {{ ITEM_STATUS_LABELS[item.status] }} · {{ item.occurredDate }}</p>
@@ -128,6 +153,7 @@ article p {
 h2 {
   font-size: 18px;
 }
+.toolbar,
 .actions,
 .images {
   display: flex;

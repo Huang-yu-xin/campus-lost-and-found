@@ -43,8 +43,9 @@ export function uploadImage(file: File): Promise<ItemImage> {
   return http.post<ItemImage>('/uploads/images', body)
 }
 
-export function listOwnItems(page: number): Promise<PageData<ItemRecord>> {
-  return http.get<PageData<ItemRecord>>('/me/items', { params: { page } })
+/** status 为空时查询全部状态。 */
+export function listOwnItems(page: number, status?: ItemStatus): Promise<PageData<ItemRecord>> {
+  return http.get<PageData<ItemRecord>>('/me/items', { params: { page, status } })
 }
 
 export function getOwnItem(id: string): Promise<ItemRecord> {
