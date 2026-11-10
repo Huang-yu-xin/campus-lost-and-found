@@ -28,6 +28,7 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * 服务端 Session + CSRF。默认所有接口需要登录；
  * 合同中的公共 GET 接口由各模块负责人在开发时逐条加入 permitAll，不整体放开。
+ * 登录、退出、改密使会话失效等由账号模块在此基础上补充。
  */
 @Configuration
 @EnableMethodSecurity
@@ -52,6 +53,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/register").permitAll()
                         // springdoc 仅在 dev 配置中开启，其他环境这些路径不存在
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api.html", "/favicon.ico").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex

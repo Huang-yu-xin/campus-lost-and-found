@@ -6,7 +6,7 @@
 
 1. `000_create_database.sql`：创建项目库。
 2. `migrations/V001__core_schema.sql`：核心 13 张表。
-3. `migrations/V002__optional_reports.sql`：选做举报的 2 张表，可推迟执行。
+3. `migrations/V002__optional_reports.sql`：举报的 2 张表。甲乙丙合并版本已接入举报功能，本地完整运行需要执行。
 4. `migrations/V003__item_submission_key.sql`：发布防重，已有开发库也需要执行一次。只依赖 V001。
 5. `seeds/S001__mock_students.sql`：仅虚拟名册，不创建账号。
 
@@ -24,7 +24,7 @@
 SOURCE database/000_create_database.sql;
 USE campus_lost_found;
 SOURCE database/migrations/V001__core_schema.sql;
--- 确定实施举报功能时再执行：
+-- 合并版本的举报功能需要这两张表：
 SOURCE database/migrations/V002__optional_reports.sql;
 SOURCE database/migrations/V003__item_submission_key.sql;
 SOURCE database/seeds/S001__mock_students.sql;

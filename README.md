@@ -110,6 +110,8 @@
 
 每个人用自己电脑上的数据库，按下面 6 步操作一次即可。命令以 PowerShell 7（`pwsh.exe`）为例。
 
+本地合并版本包含甲的账号、乙的物品和丙的审核、认领、留言、授权、举报功能。服务器是否更新另看上面的部署记录，不能用本地代码版本推断网站当前功能。
+
 ### 1. 准备软件
 
 - JDK 21（不能用 17；电脑默认是别的版本也没关系，见第 4 步）
@@ -145,6 +147,7 @@ SHOW DATABASES LIKE 'campus_lost_found';
 SOURCE database/000_create_database.sql;
 USE campus_lost_found;
 SOURCE database/migrations/V001__core_schema.sql;
+SOURCE database/migrations/V002__optional_reports.sql;
 SOURCE database/migrations/V003__item_submission_key.sql;
 SOURCE database/seeds/S001__mock_students.sql;
 
@@ -156,7 +159,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON campus_lost_found.* TO 'lostfound_app'@'
 SHOW TABLES;
 ```
 
-最后应看到 13 张表。中途任何一步报错就停下来，不要重复执行。`lostfound_app` 是后端专用账号，只能读写数据，不能改表结构；表结构要改时写新的迁移文件，详见 [迁移说明](database/README.md)。
+最后应看到 15 张表：13 张核心表和举报功能的 2 张表。已有项目库只补执行尚未执行的迁移，不重复建库或导入名册；原来只执行 V001/V003 的库，使用举报功能前还需补执行 V002。中途任何一步报错就停下来，不要重复执行。`lostfound_app` 是后端专用账号，只能读写数据，不能改表结构；表结构要改时写新的迁移文件，详见 [迁移说明](database/README.md)。
 
 ### 4. 写本机配置
 

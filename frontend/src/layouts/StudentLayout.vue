@@ -29,6 +29,10 @@ async function logout() {
           <RouterLink v-if="auth.isLoggedIn && !auth.isAdmin" :to="{ name: 'my-items' }"
             >我的发布</RouterLink
           >
+          <template v-if="auth.isLoggedIn && !auth.isAdmin">
+            <RouterLink :to="{ name: 'claim-received' }">我收到的认领</RouterLink>
+            <RouterLink :to="{ name: 'my-reports' }">我的举报</RouterLink>
+          </template>
         </nav>
         <div class="user-area">
           <template v-if="auth.isLoggedIn">
@@ -64,6 +68,7 @@ async function logout() {
 }
 
 .brand {
+  white-space: nowrap;
   font-size: 18px;
   font-weight: 600;
   color: var(--app-text);
@@ -71,6 +76,8 @@ async function logout() {
 
 .nav {
   display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
   gap: 16px;
   flex: 1;
 }
@@ -82,6 +89,7 @@ async function logout() {
 
 .user-area {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 12px;
 }

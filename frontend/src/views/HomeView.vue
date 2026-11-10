@@ -31,7 +31,28 @@ onMounted(checkBackend)
 <template>
   <section class="home">
     <h1>校园失物招领系统</h1>
-    <p class="subtitle">基础框架已就绪，业务页面开发中。</p>
+    <p class="subtitle">发布与查找物品信息，跟进认领和处理进度。</p>
+
+    <el-card shadow="never" class="status-card">
+      <template #header>常用功能</template>
+      <div class="entries">
+        <el-button type="primary" @click="$router.push({ name: 'items' })">浏览物品</el-button>
+        <template v-if="!auth.isAdmin">
+          <el-button @click="$router.push({ name: 'item-publish' })">发布信息</el-button>
+          <el-button v-if="auth.isLoggedIn" @click="$router.push({ name: 'my-items' })"
+            >我的发布</el-button
+          >
+          <el-button v-if="auth.isLoggedIn" @click="$router.push({ name: 'claim-received' })"
+            >我收到的认领</el-button
+          >
+        </template>
+        <template v-else>
+          <el-button @click="$router.push({ name: 'admin-items' })">信息审核</el-button>
+          <el-button @click="$router.push({ name: 'admin-reports' })">举报处理</el-button>
+        </template>
+      </div>
+      <p v-if="!auth.isLoggedIn" class="login-state">登录后可以发布信息和管理本人记录。</p>
+    </el-card>
 
     <el-card shadow="never" class="status-card">
       <template #header>系统连通性</template>
@@ -54,6 +75,12 @@ onMounted(checkBackend)
 </template>
 
 <style scoped>
+.home {
+  width: 100%;
+  max-width: 720px;
+  margin-inline: auto;
+}
+
 .home h1 {
   margin: 0 0 8px;
   font-size: 24px;
@@ -65,12 +92,19 @@ onMounted(checkBackend)
 }
 
 .status-card {
-  max-width: 560px;
+  margin-bottom: 20px;
 }
 
 .checking,
 .login-state {
   text-align: center;
   color: var(--app-text-secondary);
+}
+
+.entries {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 </style>

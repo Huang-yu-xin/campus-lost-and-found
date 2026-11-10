@@ -45,6 +45,24 @@ const router = createRouter({
           name: 'item-detail',
           component: () => import('@/views/item/ItemDetailView.vue'),
         },
+        {
+          path: 'claims',
+          name: 'claim-received',
+          component: () => import('@/views/claim/ClaimListView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'reports',
+          name: 'my-reports',
+          component: () => import('@/views/report/MyReportsView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'claims/:claimId',
+          name: 'claim-detail',
+          component: () => import('@/views/claim/ClaimDetailView.vue'),
+          meta: { requiresAuth: true },
+        },
         { path: 'login', name: 'login', component: () => import('@/views/account/LoginView.vue') },
         {
           path: 'register',
@@ -68,6 +86,16 @@ const router = createRouter({
           path: '',
           name: 'admin-home',
           component: () => import('@/views/admin/AdminHomeView.vue'),
+        },
+        {
+          path: 'items',
+          name: 'admin-items',
+          component: () => import('@/views/admin/AdminItemsView.vue'),
+        },
+        {
+          path: 'reports',
+          name: 'admin-reports',
+          component: () => import('@/views/admin/AdminReportsView.vue'),
         },
       ],
     },
