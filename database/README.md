@@ -7,9 +7,10 @@
 1. `000_create_database.sql`：创建项目库。
 2. `migrations/V001__core_schema.sql`：核心 13 张表。
 3. `migrations/V002__optional_reports.sql`：选做举报的 2 张表，可推迟执行。
-4. `seeds/S001__mock_students.sql`：仅虚拟名册，不创建账号。
+4. `migrations/V003__item_submission_key.sql`：发布防重，已有开发库也需要执行一次。只依赖 V001。
+5. `seeds/S001__mock_students.sql`：仅虚拟名册，不创建账号。
 
-DDL 应只对空项目库执行一次。脚本不含 DROP/TRUNCATE，也不关闭外键检查。重复执行创建表会报错，应该停下核对，不能加 --force 跳过。MySQL DDL 隐式提交，出错时不要假定整份脚本已自动回滚。
+初始化脚本用于空项目库，各迁移只执行一次。已执行 V001 的库可单独运行尚未执行的 V003。脚本不含 DROP/TRUNCATE，也不关闭外键检查。执行出错时停下核对，MySQL DDL 会隐式提交。
 
 当前没有引入 Flyway；V001/V002 是有序版本文件命名，不代表会自动迁移。团队记录已执行版本，后续修改使用新迁移，不反复编辑已投入使用的 V001。未来接入自动迁移工具时另行配置。
 
@@ -25,6 +26,7 @@ USE campus_lost_found;
 SOURCE database/migrations/V001__core_schema.sql;
 -- 确定实施举报功能时再执行：
 SOURCE database/migrations/V002__optional_reports.sql;
+SOURCE database/migrations/V003__item_submission_key.sql;
 SOURCE database/seeds/S001__mock_students.sql;
 ```
 

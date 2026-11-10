@@ -15,7 +15,7 @@ public record CreateItemRequest(
         @NotNull LocalDate occurredDate,
         @NotBlank @CodePointLength(min = 1, max = 50) String title,
         @NotBlank @CodePointLength(min = 10, max = 500) String description,
-        @Size(max = 3) List<@Pattern(regexp = "[1-9][0-9]{0,18}") String> imageIds) {
+        @Size(max = 3) List<@NotNull @Pattern(regexp = "[1-9][0-9]{0,18}") String> imageIds) {
 
     public CreateItemRequest {
         location = location == null ? null : location.strip();

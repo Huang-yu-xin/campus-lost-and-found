@@ -26,6 +26,9 @@ async function logout() {
           <RouterLink to="/">首页</RouterLink>
           <RouterLink :to="{ name: 'items' }">浏览物品</RouterLink>
           <RouterLink v-if="!auth.isAdmin" :to="{ name: 'item-publish' }">发布信息</RouterLink>
+          <RouterLink v-if="auth.isLoggedIn && !auth.isAdmin" :to="{ name: 'my-items' }"
+            >我的发布</RouterLink
+          >
         </nav>
         <div class="user-area">
           <template v-if="auth.isLoggedIn">

@@ -49,6 +49,14 @@ watch(
       </dl>
       <h2>物品描述</h2>
       <p class="description">{{ item.description }}</p>
+      <div class="images">
+        <img
+          v-for="(image, index) in item.images"
+          :key="image.id"
+          :src="image.url"
+          :alt="`物品图片 ${index + 1}`"
+        />
+      </div>
     </article>
     <p v-else role="status">正在加载详情…</p>
   </section>
@@ -66,5 +74,16 @@ dd {
 .description {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+.images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+img {
+  max-width: 100%;
+  width: 320px;
+  max-height: 320px;
+  object-fit: contain;
 }
 </style>

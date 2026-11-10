@@ -10,6 +10,7 @@ export interface CreateItemRequest {
   location: string
   occurredDate: string
   description: string
+  imageIds?: string[]
 }
 
 export interface PublicItem extends CreateItemRequest {
@@ -21,12 +22,44 @@ export interface PublicItem extends CreateItemRequest {
   hasConfirmedClaim: boolean
 }
 
-interface ItemRecord extends PublicItem {
+export interface ItemRecord extends PublicItem {
   status: ItemStatus
   version: number
   reviewReason: string | null
   closureReason: string | null
   updatedAt: string
+}
+
+export interface ItemImage {
+  id: string
+  url: string
+  mediaType: string
+  sizeBytes: number
+}
+
+export function uploadImage(file: File): Promise<ItemImage> {
+  const body = new FormData()
+  body.append('file', file)
+  return http.post<ItemImage>('/uploads/images', body)
+}
+
+export function listOwnItems(page: number): Promise<PageData<ItemRecord>> {
+  return http.get<PageData<ItemRecord>>('/me/items', { params: { page } })
+}
+
+export function getOwnItem(id: string): Promise<ItemRecord> {
+  return http.get<ItemRecord>(`/me/items/${encodeURIComponent(id)}`)
+}
+
+export function editItem(
+  id: string,
+  request: Omit<CreateItemRequest, 'type'> & { expectedVersion: number },
+): Promise<ItemRecord> {
+  return http.patch<ItemRecord>(`/items/${encodeURIComponent(id)}`, request)
+}
+
+export function withdrawItem(id: string, expectedVersion: number): Promise<ItemRecord> {
+  return http.post<ItemRecord>(`/items/${encodeURIComponent(id)}/withdraw`, { expectedVersion })
 }
 
 export interface ItemFilters {
@@ -38,8 +71,8 @@ export interface ItemFilters {
   dateTo?: string
 }
 
-export function createItem(request: CreateItemRequest): Promise<ItemRecord> {
-  return http.post<ItemRecord>('/items', request)
+export function createItem(request: CreateItemRequest, submissionKey: string): Promise<ItemRecord> {
+  return http.post<ItemRecord>('/items', request, { headers: { 'Idempotency-Key': submissionKey } })
 }
 
 export function listItems(page: number, filters: ItemFilters): Promise<PageData<PublicItem>> {

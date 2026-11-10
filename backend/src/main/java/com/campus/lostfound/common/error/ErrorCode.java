@@ -34,6 +34,7 @@ public enum ErrorCode {
     ACCOUNT_IDENTIFIER_CONFLICT(HttpStatus.CONFLICT, "登录标识冲突"),
     EMAIL_ALREADY_BOUND(HttpStatus.CONFLICT, "该邮箱已被使用"),
     ITEM_STATE_CONFLICT(HttpStatus.CONFLICT, "物品当前状态不允许该操作"),
+    ITEM_SUBMISSION_CONFLICT(HttpStatus.CONFLICT, "同一提交编号已用于其他内容"),
     CLAIM_STATE_CONFLICT(HttpStatus.CONFLICT, "认领申请当前状态不允许该操作"),
     ITEM_ALREADY_CLAIMED(HttpStatus.CONFLICT, "该物品已有确认的认领人"),
     CLAIM_ALREADY_EXISTS(HttpStatus.CONFLICT, "已提交过认领申请"),
