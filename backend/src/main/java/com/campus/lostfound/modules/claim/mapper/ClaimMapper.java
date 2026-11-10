@@ -118,10 +118,4 @@ public interface ClaimMapper {
     int closeOtherPendingClaims(@Param("itemId") long itemId,
                                 @Param("claimId") long claimId,
                                 @Param("reason") String reason);
-
-    @Insert("INSERT INTO operation_logs "
-            + "(actor_id, entity_type, entity_id, action, before_status, after_status, request_id) "
-            + "VALUES (#{actorId}, #{entityType}, #{entityId}, #{action}, "
-            + "#{beforeStatus}, #{afterStatus}, #{requestId})")
-    int insertOperationLog(Map<String, Object> log);
 }

@@ -92,10 +92,4 @@ public interface ReportMapper {
     @Insert("INSERT INTO report_access_logs (report_id, admin_id, request_id) "
             + "VALUES (#{reportId}, #{adminId}, #{requestId})")
     int insertAccessLog(Map<String, Object> log);
-
-    @Insert("INSERT INTO operation_logs "
-            + "(actor_id, entity_type, entity_id, action, before_status, after_status, request_id) "
-            + "VALUES (#{actorId}, 'REPORT', #{entityId}, #{action}, #{beforeStatus}, "
-            + "#{afterStatus}, #{requestId})")
-    int insertOperationLog(Map<String, Object> log);
 }

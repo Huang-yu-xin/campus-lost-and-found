@@ -2,16 +2,16 @@ package com.campus.lostfound.modules.moderation.service;
 
 import com.campus.lostfound.common.api.PageData;
 import com.campus.lostfound.common.api.Pages;
+import com.campus.lostfound.common.audit.AuditService;
+import com.campus.lostfound.common.audit.AuditService.Entity;
 import com.campus.lostfound.common.error.BusinessException;
 import com.campus.lostfound.common.error.ErrorCode;
 import com.campus.lostfound.common.sql.Rows;
-import com.campus.lostfound.common.web.RequestIdFilter;
 import com.campus.lostfound.modules.item.dto.ItemViews.ItemRecord;
 import com.campus.lostfound.modules.item.service.ItemService;
 import com.campus.lostfound.modules.item.service.ItemStateLocks;
 import com.campus.lostfound.modules.moderation.dto.ReviewRecord;
 import com.campus.lostfound.modules.moderation.mapper.ModerationMapper;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -27,11 +27,14 @@ public class ModerationService {
     private final ModerationMapper mapper;
     private final ItemStateLocks stateLocks;
     private final ItemService items;
+    private final AuditService audit;
 
-    public ModerationService(ModerationMapper mapper, ItemStateLocks stateLocks, ItemService items) {
+    public ModerationService(ModerationMapper mapper, ItemStateLocks stateLocks, ItemService items,
+                             AuditService audit) {
         this.mapper = mapper;
         this.stateLocks = stateLocks;
         this.items = items;
+        this.audit = audit;
     }
 
     /** 管理列表包括待审核、已退回及可直接下架的已发布信息，默认待审核，createdAt、id 升序。 */
@@ -66,7 +69,7 @@ public class ModerationService {
             throw new BusinessException(ErrorCode.ITEM_STATE_CONFLICT);
         }
         record(operatorId, itemId, "APPROVE", null);
-        log(operatorId, itemId, "APPROVE_ITEM", "PENDING_REVIEW", "PUBLISHED");
+        audit.record(operatorId, Entity.ITEM, itemId, "APPROVE_ITEM", "PENDING_REVIEW", "PUBLISHED");
         return items.getRecord(itemId);
     }
 
@@ -78,7 +81,7 @@ public class ModerationService {
             throw new BusinessException(ErrorCode.ITEM_STATE_CONFLICT);
         }
         record(operatorId, itemId, "RETURN", text);
-        log(operatorId, itemId, "RETURN_ITEM", "PENDING_REVIEW", "RETURNED");
+        audit.record(operatorId, Entity.ITEM, itemId, "RETURN_ITEM", "PENDING_REVIEW", "RETURNED");
         return items.getRecord(itemId);
     }
 
@@ -93,7 +96,7 @@ public class ModerationService {
         mapper.closeClaimsForItem(itemId, text);
         mapper.revokePermissionsForItem(itemId);
         record(operatorId, itemId, "TAKE_DOWN", text);
-        log(operatorId, itemId, "TAKE_DOWN_ITEM", "PUBLISHED", "OFF_SHELF");
+        audit.record(operatorId, Entity.ITEM, itemId, "TAKE_DOWN_ITEM", "PUBLISHED", "OFF_SHELF");
         return items.getRecord(itemId);
     }
 
@@ -124,17 +127,6 @@ public class ModerationService {
     /** 审核记录保存处置后的物品版本，便于核对每次审核对应的是哪一版内容。 */
     private void record(long operatorId, long itemId, String action, String reason) {
         mapper.insertReviewRecord(itemId, operatorId, action, reason, mapper.findVersion(itemId));
-    }
-
-    private void log(long actorId, long itemId, String action, String before, String after) {
-        Map<String, Object> log = new HashMap<>();
-        log.put("actorId", actorId);
-        log.put("entityId", itemId);
-        log.put("action", action);
-        log.put("beforeStatus", before);
-        log.put("afterStatus", after);
-        log.put("requestId", RequestIdFilter.current());
-        mapper.insertOperationLog(log);
     }
 
     private static ReviewRecord toRecord(Map<String, Object> row) {

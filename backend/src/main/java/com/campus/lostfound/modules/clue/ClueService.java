@@ -2,11 +2,11 @@ package com.campus.lostfound.modules.clue;
 
 import com.campus.lostfound.common.api.PageData;
 import com.campus.lostfound.common.api.Pages;
+import com.campus.lostfound.common.audit.AuditService;
+import com.campus.lostfound.common.audit.AuditService.Entity;
 import com.campus.lostfound.common.error.BusinessException;
 import com.campus.lostfound.common.error.ErrorCode;
 import com.campus.lostfound.common.sql.Rows;
-import com.campus.lostfound.common.web.RequestIdFilter;
-import com.campus.lostfound.modules.claim.mapper.ClaimMapper;
 import com.campus.lostfound.modules.item.dto.ItemViews.ItemRecord;
 import com.campus.lostfound.modules.item.dto.ItemViews.Publisher;
 import com.campus.lostfound.modules.item.service.ItemService;
@@ -33,9 +33,9 @@ public class ClueService {
     private final ClueMapper mapper;
     private final ItemStateLocks locks;
     private final ItemService items;
-    private final ClaimMapper audit;
+    private final AuditService audit;
 
-    public ClueService(ClueMapper mapper, ItemStateLocks locks, ItemService items, ClaimMapper audit) {
+    public ClueService(ClueMapper mapper, ItemStateLocks locks, ItemService items, AuditService audit) {
         this.mapper = mapper; this.locks = locks; this.items = items; this.audit = audit;
     }
 
@@ -51,7 +51,7 @@ public class ClueService {
         try { mapper.insert(row); }
         catch (DuplicateKeyException ex) { throw new BusinessException(ErrorCode.CLUE_ALREADY_EXISTS); }
         long id = Rows.num(row, "id");
-        log(user, "CLUE", id, "CREATE_CLUE", null, null);
+        audit.record(user, Entity.CLUE, id, "CREATE_CLUE", null, null);
         return view(mapper.find(id));
     }
 
@@ -103,7 +103,7 @@ public class ClueService {
         if (Rows.num(item, "version") != version) throw new BusinessException(ErrorCode.VERSION_CONFLICT);
         requireLostPublished(item);
         if (mapper.resolve(itemId, version) != 1) throw new BusinessException(ErrorCode.ITEM_STATE_CONFLICT);
-        log(user, "ITEM", itemId, "RESOLVE_LOST_ITEM", "PUBLISHED", "ARCHIVED");
+        audit.record(user, Entity.ITEM, itemId, "RESOLVE_LOST_ITEM", "PUBLISHED", "ARCHIVED");
         return items.getOwn(itemId, user);
     }
 
@@ -136,11 +136,5 @@ public class ClueService {
     }
     private static Message message(Map<String, Object> row) {
         return new Message(Long.toString(Rows.num(row, "id")), user(row, "sender"), Rows.str(row, "content"), time(row));
-    }
-    private void log(long actor, String type, long id, String action, String before, String after) {
-        var row = new HashMap<String, Object>();
-        row.put("actorId", actor); row.put("entityType", type); row.put("entityId", id);
-        row.put("action", action); row.put("beforeStatus", before); row.put("afterStatus", after);
-        row.put("requestId", RequestIdFilter.current()); audit.insertOperationLog(row);
     }
 }

@@ -2,6 +2,8 @@ package com.campus.lostfound.modules.report.service;
 
 import com.campus.lostfound.common.api.PageData;
 import com.campus.lostfound.common.api.Pages;
+import com.campus.lostfound.common.audit.AuditService;
+import com.campus.lostfound.common.audit.AuditService.Entity;
 import com.campus.lostfound.common.error.BusinessException;
 import com.campus.lostfound.common.error.ErrorCode;
 import com.campus.lostfound.common.sql.Rows;
@@ -35,11 +37,14 @@ public class ReportService {
     private final ReportMapper mapper;
     private final ModerationService moderationService;
     private final ItemStateLocks stateLocks;
+    private final AuditService audit;
 
-    public ReportService(ReportMapper mapper, ModerationService moderationService, ItemStateLocks stateLocks) {
+    public ReportService(ReportMapper mapper, ModerationService moderationService, ItemStateLocks stateLocks,
+                         AuditService audit) {
         this.mapper = mapper;
         this.moderationService = moderationService;
         this.stateLocks = stateLocks;
+        this.audit = audit;
     }
 
     /** 提交举报：普通举报只针对公开物品；关联会话举报允许物品已归档但须属于该会话。 */
@@ -93,7 +98,7 @@ public class ReportService {
         row.put("reason", reason);
         mapper.insertReport(row);
         long reportId = Rows.num(row, "id");
-        writeLog(userId, reportId, "CREATE_REPORT", null, STATUS_PENDING);
+        audit.record(userId, Entity.REPORT, reportId, "CREATE_REPORT", null, STATUS_PENDING);
         return toView(mapper.findReport(reportId));
     }
 
@@ -249,7 +254,7 @@ public class ReportService {
         if (mapper.resolveReport(params) == 0) {
             throw new BusinessException(ErrorCode.VERSION_CONFLICT);
         }
-        writeLog(adminId, reportId, "RESOLVE_REPORT", STATUS_PENDING, STATUS_RESOLVED);
+        audit.record(adminId, Entity.REPORT, reportId, "RESOLVE_REPORT", STATUS_PENDING, STATUS_RESOLVED);
         return toView(mapper.findReport(reportId));
     }
 
@@ -270,17 +275,6 @@ public class ReportService {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, label + "需为 1~500 字");
         }
         return text;
-    }
-
-    private void writeLog(long actorId, long reportId, String action, String before, String after) {
-        Map<String, Object> log = new HashMap<>();
-        log.put("actorId", actorId);
-        log.put("entityId", reportId);
-        log.put("action", action);
-        log.put("beforeStatus", before);
-        log.put("afterStatus", after);
-        log.put("requestId", RequestIdFilter.current());
-        mapper.insertOperationLog(log);
     }
 
     private static ReportView toView(Map<String, Object> row) {

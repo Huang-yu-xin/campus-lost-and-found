@@ -1,9 +1,10 @@
 package com.campus.lostfound.modules.claim.service;
 
+import com.campus.lostfound.common.audit.AuditService;
+import com.campus.lostfound.common.audit.AuditService.Entity;
 import com.campus.lostfound.common.error.BusinessException;
 import com.campus.lostfound.common.error.ErrorCode;
 import com.campus.lostfound.common.sql.Rows;
-import com.campus.lostfound.common.web.RequestIdFilter;
 import com.campus.lostfound.modules.claim.dto.ClaimDtos.ContactPermissionRequest;
 import com.campus.lostfound.modules.claim.dto.ClaimDtos.ContactPermissionView;
 import com.campus.lostfound.modules.claim.dto.ClaimDtos.CounterpartyContactView;
@@ -27,12 +28,14 @@ public class ContactPermissionService {
     private final ContactPermissionMapper mapper;
     private final ClaimMapper claimMapper;
     private final ItemStateLocks stateLocks;
+    private final AuditService audit;
 
     public ContactPermissionService(ContactPermissionMapper mapper, ClaimMapper claimMapper,
-            ItemStateLocks stateLocks) {
+            ItemStateLocks stateLocks, AuditService audit) {
         this.mapper = mapper;
         this.claimMapper = claimMapper;
         this.stateLocks = stateLocks;
+        this.audit = audit;
     }
 
     /** 查询自己的授权设置；未设置时返回 version=0、两个 false。 */
@@ -94,7 +97,7 @@ public class ContactPermissionService {
             throw new BusinessException(ErrorCode.VERSION_CONFLICT);
         }
 
-        writeLog(userId, claimId, "SET_CONTACT_PERMISSION",
+        audit.record(userId, Entity.CONTACT_PERMISSION, claimId, "SET_CONTACT_PERMISSION",
                 flagText(before),
                 flagText(request.phoneVisible(), request.emailVisible()));
         return getMine(userId, claimId);
@@ -164,18 +167,6 @@ public class ContactPermissionService {
     private static boolean isEffective(Map<String, Object> claim) {
         return "CONFIRMED".equals(Rows.str(claim, "status"))
                 && "PUBLISHED".equals(Rows.str(claim, "item_status"));
-    }
-
-    private void writeLog(long actorId, long claimId, String action, String before, String after) {
-        Map<String, Object> log = new HashMap<>();
-        log.put("actorId", actorId);
-        log.put("entityType", "CONTACT_PERMISSION");
-        log.put("entityId", claimId);
-        log.put("action", action);
-        log.put("beforeStatus", before);
-        log.put("afterStatus", after);
-        log.put("requestId", RequestIdFilter.current());
-        claimMapper.insertOperationLog(log);
     }
 
     private static String flagText(Map<String, Object> permission) {

@@ -5,10 +5,11 @@ import static com.campus.lostfound.common.sql.Rows.str;
 
 import com.campus.lostfound.common.api.PageData;
 import com.campus.lostfound.common.api.Pages;
+import com.campus.lostfound.common.audit.AuditService;
+import com.campus.lostfound.common.audit.AuditService.Entity;
 import com.campus.lostfound.common.error.BusinessException;
 import com.campus.lostfound.common.error.ErrorCode;
 import com.campus.lostfound.common.sql.Rows;
-import com.campus.lostfound.common.web.RequestIdFilter;
 import com.campus.lostfound.modules.claim.dto.ClaimDtos.ClaimDetailView;
 import com.campus.lostfound.modules.claim.dto.ClaimDtos.ClaimView;
 import com.campus.lostfound.modules.claim.dto.ClaimDtos.UserBrief;
@@ -37,13 +38,15 @@ public class ClaimService {
     private final ContactPermissionService contactPermissionService;
     private final ItemStateLocks stateLocks;
     private final ItemService items;
+    private final AuditService audit;
 
     public ClaimService(ClaimMapper mapper, ContactPermissionService contactPermissionService,
-            ItemStateLocks stateLocks, ItemService items) {
+            ItemStateLocks stateLocks, ItemService items, AuditService audit) {
         this.mapper = mapper;
         this.contactPermissionService = contactPermissionService;
         this.stateLocks = stateLocks;
         this.items = items;
+        this.audit = audit;
     }
 
     /** 我申请的 / 我收到的认领，createdAt、id 降序；itemId 只能缩小本人可见范围。 */
@@ -99,7 +102,7 @@ public class ClaimService {
             throw new BusinessException(ErrorCode.CLAIM_ALREADY_EXISTS);
         }
         long claimId = num(row, "id");
-        writeLog(userId, "CLAIM", claimId, "CREATE_CLAIM", null, "PENDING");
+        audit.record(userId, Entity.CLAIM, claimId, "CREATE_CLAIM", null, "PENDING");
         return toView(mapper.findClaim(claimId));
     }
 
@@ -149,7 +152,7 @@ public class ClaimService {
         }
         // 合同要求：唯一认领人确定后，同物品其他 PENDING 申请关闭
         mapper.closeOtherPendingClaims(num(claim, "item_id"), claimId, "OTHER_ACCEPTED");
-        writeLog(userId, "CLAIM", claimId, "CONFIRM_CLAIM", before, "CONFIRMED");
+        audit.record(userId, Entity.CLAIM, claimId, "CONFIRM_CLAIM", before, "CONFIRMED");
         return toView(mapper.findClaim(claimId));
     }
 
@@ -175,7 +178,7 @@ public class ClaimService {
         if (mapper.markRejected(claimId, text) == 0) {
             throw new BusinessException(ErrorCode.CLAIM_STATE_CONFLICT);
         }
-        writeLog(userId, "CLAIM", claimId, "REJECT_CLAIM", before, "REJECTED");
+        audit.record(userId, Entity.CLAIM, claimId, "REJECT_CLAIM", before, "REJECTED");
         return toView(mapper.findClaim(claimId));
     }
 
@@ -204,7 +207,7 @@ public class ClaimService {
         }
         // 交接完成后授权失效；即使旧页面仍持有开关，也必须按业务状态拒绝读取
         contactPermissionService.revokeAllForClaim(claimId);
-        writeLog(userId, "CLAIM", claimId, "COMPLETE_CLAIM", before, "COMPLETED");
+        audit.record(userId, Entity.CLAIM, claimId, "COMPLETE_CLAIM", before, "COMPLETED");
         return toView(mapper.findClaim(claimId));
     }
 
@@ -213,19 +216,6 @@ public class ClaimService {
         if (num(claim, "version") != expectedVersion) {
             throw new BusinessException(ErrorCode.VERSION_CONFLICT);
         }
-    }
-
-    private void writeLog(long actorId, String entityType, long entityId, String action,
-                          String before, String after) {
-        Map<String, Object> log = new HashMap<>();
-        log.put("actorId", actorId);
-        log.put("entityType", entityType);
-        log.put("entityId", entityId);
-        log.put("action", action);
-        log.put("beforeStatus", before);
-        log.put("afterStatus", after);
-        log.put("requestId", RequestIdFilter.current());
-        mapper.insertOperationLog(log);
     }
 
     private static ClaimView toView(Map<String, Object> c) {

@@ -53,10 +53,4 @@ public interface ModerationMapper {
     int insertReviewRecord(@Param("itemId") long itemId, @Param("operatorId") long operatorId,
                            @Param("action") String action, @Param("reason") String reason,
                            @Param("itemVersion") long itemVersion);
-
-    @Insert("INSERT INTO operation_logs "
-            + "(actor_id, entity_type, entity_id, action, before_status, after_status, request_id) "
-            + "VALUES (#{actorId}, 'ITEM', #{entityId}, #{action}, #{beforeStatus}, "
-            + "#{afterStatus}, #{requestId})")
-    int insertOperationLog(Map<String, Object> log);
 }
