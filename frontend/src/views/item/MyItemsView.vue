@@ -4,6 +4,7 @@ import { ElMessageBox } from 'element-plus'
 import { describeError } from '@/api/feedback'
 import { listOwnItems, withdrawItem, type ItemRecord } from '@/api/items'
 import { ITEM_STATUS_LABELS } from '@/types/domain'
+import { resolveLostItem } from '@/api/clues'
 
 const items = ref<ItemRecord[]>([])
 const page = ref(1)
@@ -46,6 +47,19 @@ async function withdraw(item: ItemRecord) {
   }
 }
 onMounted(load)
+async function resolve(item: ItemRecord) {
+  if (busyId.value) return
+  busyId.value = item.id
+  try {
+    await ElMessageBox.confirm('确认已找回？归档后停止接收线索和留言。', '标记已找回')
+    await resolveLostItem(item.id, item.version)
+    await load()
+  } catch (e) {
+    if (e !== 'cancel' && e !== 'close') errorMessage.value = describeError(e)
+  } finally {
+    busyId.value = ''
+  }
+}
 </script>
 
 <template>
@@ -60,6 +74,13 @@ onMounted(load)
       <h2>{{ item.title }}</h2>
       <p>编号 {{ item.id }} · {{ ITEM_STATUS_LABELS[item.status] }} · {{ item.occurredDate }}</p>
       <p>{{ item.description }}</p>
+      <RouterLink v-if="item.type === 'LOST'" :to="{ name: 'my-clues' }">查看线索记录</RouterLink>
+      <el-button
+        v-if="item.type === 'LOST' && item.status === 'PUBLISHED'"
+        :disabled="!!busyId"
+        @click="resolve(item)"
+        >标记已找回</el-button
+      >
       <div class="images">
         <img v-for="image in item.images" :key="image.id" :src="image.url" alt="物品图片" />
       </div>

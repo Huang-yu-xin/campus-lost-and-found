@@ -23,7 +23,7 @@ export interface Report {
 export interface CreateReportBody {
   itemId: string | number
   claimId?: number | null
-  clueId?: number | null
+  clueId?: string | number | null
   reason: string
 }
 

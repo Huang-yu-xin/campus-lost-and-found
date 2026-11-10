@@ -64,6 +64,18 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
+          path: 'me/clues',
+          name: 'my-clues',
+          component: () => import('@/views/clue/ClueListView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'clues/:clueId',
+          name: 'clue-detail',
+          component: () => import('@/views/clue/ClueDetailView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
           path: 'claims/:claimId',
           name: 'claim-detail',
           component: () => import('@/views/claim/ClaimDetailView.vue'),

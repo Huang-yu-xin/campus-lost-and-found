@@ -4,6 +4,7 @@ import { reactive } from 'vue'
 import ElementPlus from 'element-plus'
 import { getItem, type PublicItem } from '@/api/items'
 import { createClaim } from '@/api/claim'
+import { createClue } from '@/api/clues'
 import ItemDetailView from '@/views/item/ItemDetailView.vue'
 
 const push = vi.fn<(location: unknown) => void>()
@@ -15,6 +16,7 @@ vi.mock('vue-router', () => ({
 vi.mock('@/stores/auth', () => ({ useAuthStore: () => auth }))
 vi.mock('@/api/items', () => ({ getItem: vi.fn<typeof getItem>() }))
 vi.mock('@/api/claim', () => ({ createClaim: vi.fn<typeof createClaim>() }))
+vi.mock('@/api/clues', () => ({ createClue: vi.fn<typeof createClue>() }))
 vi.mock('@/api/reports', () => ({
   createReport: vi.fn<typeof import('@/api/reports').createReport>(),
 }))
@@ -44,6 +46,35 @@ function mountPage() {
   })
 }
 describe('物品详情与认领页面衔接', () => {
+  it('寻物线索从公开页进入双方私有会话', async () => {
+    vi.mocked(getItem).mockResolvedValue({ ...item, type: 'LOST' })
+    vi.mocked(createClue).mockResolvedValue({
+      id: '9',
+      lostItemId: '42',
+      content: '图书馆服务台有同样描述的水杯',
+      provider: { id: '2', nickname: '同学' },
+      publisher: item.publisher,
+      createdAt: '',
+    })
+    const wrapper = mountPage()
+    await flushPromises()
+    expect(wrapper.find('#claim-description').exists()).toBe(false)
+    await wrapper.get('#clue-content').setValue('图书馆服务台有同样描述的水杯')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(createClue).toHaveBeenCalledWith('42', '图书馆服务台有同样描述的水杯')
+    expect(push).toHaveBeenCalledWith({ name: 'clue-detail', params: { clueId: '9' } })
+    wrapper.unmount()
+  })
+  it('寻物发布者能查看收到的线索而不能给自己提交', async () => {
+    auth.me = { id: '1' }
+    vi.mocked(getItem).mockResolvedValue({ ...item, type: 'LOST' })
+    const wrapper = mountPage()
+    await flushPromises()
+    expect(wrapper.find('form').exists()).toBe(false)
+    expect(wrapper.text()).toContain('查看我收到的线索')
+    wrapper.unmount()
+  })
   it('从乙的物品详情提交认领后跳转到丙的私有详情', async () => {
     vi.mocked(createClaim).mockResolvedValue({
       id: 7,

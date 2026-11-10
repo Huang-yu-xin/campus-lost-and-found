@@ -33,6 +33,7 @@ async function logout() {
             <RouterLink :to="{ name: 'my-claims' }">我申请的认领</RouterLink>
             <RouterLink :to="{ name: 'claim-received' }">我收到的认领</RouterLink>
             <RouterLink :to="{ name: 'my-reports' }">我的举报</RouterLink>
+            <RouterLink :to="{ name: 'my-clues' }">我的线索</RouterLink>
           </template>
         </nav>
         <div class="user-area">

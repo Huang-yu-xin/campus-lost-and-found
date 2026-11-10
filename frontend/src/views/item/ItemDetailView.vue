@@ -6,6 +6,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { describeError } from '@/api/feedback'
 import { getItem, type PublicItem } from '@/api/items'
 import { createClaim } from '@/api/claim'
+import { createClue } from '@/api/clues'
 import { createReport } from '@/api/reports'
 import { useAuthStore } from '@/stores/auth'
 import { CATEGORY_LABELS, ITEM_TYPE_LABELS } from '@/types/domain'
@@ -20,6 +21,24 @@ const claimDescription = ref('')
 const claimError = ref('')
 const submittingClaim = ref(false)
 const reporting = ref(false)
+const clueContent = ref('')
+async function submitClue() {
+  if (!item.value || submittingClaim.value) return
+  if (textLength(clueContent.value.trim()) < 10 || textLength(clueContent.value.trim()) > 500) {
+    claimError.value = '请填写 10～500 字的线索'
+    return
+  }
+  submittingClaim.value = true
+  claimError.value = ''
+  try {
+    const clue = await createClue(item.value.id, clueContent.value.trim())
+    await router.push({ name: 'clue-detail', params: { clueId: clue.id } })
+  } catch (e) {
+    claimError.value = describeError(e)
+  } finally {
+    submittingClaim.value = false
+  }
+}
 const isOwner = computed(() => item.value?.publisher.id === auth.me?.id)
 const canClaim = computed(
   () =>
@@ -151,6 +170,29 @@ watch(
         @click="reportItem"
         >举报这条信息</el-button
       >
+      <section v-if="item.type === 'LOST'" class="claim-section">
+        <h2>提供线索</h2>
+        <RouterLink v-if="isOwner" :to="{ name: 'my-clues' }">查看我收到的线索</RouterLink>
+        <RouterLink
+          v-else-if="!auth.isLoggedIn"
+          :to="{ name: 'login', query: { redirect: route.fullPath } }"
+          >登录后提供线索</RouterLink
+        >
+        <form v-else-if="!auth.isAdmin" @submit.prevent="submitClue">
+          <label for="clue-content">线索（10～500 字，仅你和发布人可见）</label>
+          <el-input
+            id="clue-content"
+            v-model="clueContent"
+            type="textarea"
+            :rows="3"
+            :disabled="submittingClaim"
+          />
+          <el-alert v-if="claimError" :title="claimError" type="error" :closable="false" />
+          <el-button native-type="submit" type="primary" :loading="submittingClaim"
+            >提交线索</el-button
+          >
+        </form>
+      </section>
     </article>
     <p v-else role="status">正在加载详情…</p>
   </section>

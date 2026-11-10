@@ -50,6 +50,7 @@ class AbcWorkflowIntegrationTest {
     @Autowired AccountService accounts;
     @Autowired ItemService items;
     @Autowired ClaimService claims;
+    @Autowired com.campus.lostfound.modules.clue.ClueService clues;
     long owner, applicant, other, admin;
     MockHttpSession ownerSession, applicantSession, otherSession, adminSession;
 
@@ -85,6 +86,69 @@ class AbcWorkflowIntegrationTest {
                 .andExpect(status().isBadRequest());
         mvc.perform(get("/api/v1/me/claims").param("page", "2147483647").session(applicantSession))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test void lostCluesArePrivatePagedAndBecomeReadOnlyAfterFound() throws Exception {
+        String item = publish("LOST");
+        send(applicantSession, post("/api/v1/items/" + item + "/clues"), Map.of("content", "我在图书馆服务台看到相似物品"))
+                .andExpect(status().isConflict());
+        approve(item);
+        send(ownerSession, post("/api/v1/items/" + item + "/clues"), Map.of("content", "我在图书馆服务台看到相似物品"))
+                .andExpect(status().isForbidden());
+        String result = send(applicantSession, post("/api/v1/items/" + item + "/clues"),
+                Map.of("content", "我在图书馆服务台看到相似物品"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String clue = JsonPath.read(result, "$.data.id");
+        send(applicantSession, post("/api/v1/items/" + item + "/clues"), Map.of("content", "我又补充了一条相同物品的线索"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CLUE_ALREADY_EXISTS"));
+        mvc.perform(get("/api/v1/clues/" + clue).session(otherSession)).andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/clues/" + clue).session(adminSession)).andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/me/clues").session(applicantSession))
+                .andExpect(jsonPath("$.data.total").value(1)).andExpect(jsonPath("$.data.items[0].id").value(clue));
+        mvc.perform(get("/api/v1/me/received-clues").param("itemId", item).session(otherSession))
+                .andExpect(jsonPath("$.data.total").value(0));
+        mvc.perform(get("/api/v1/items/" + item + "/clues").session(applicantSession)).andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/items/" + item + "/clues").session(ownerSession))
+                .andExpect(jsonPath("$.data.total").value(1));
+        send(otherSession, post("/api/v1/clues/" + clue + "/messages"), Map.of("content", "越权消息"))
+                .andExpect(status().isNotFound());
+        for (int i = 0; i < 12; i++) {
+            send(i % 2 == 0 ? applicantSession : ownerSession, post("/api/v1/clues/" + clue + "/messages"),
+                    Map.of("content", "分页留言 " + i)).andExpect(status().isCreated());
+        }
+        mvc.perform(get("/api/v1/clues/" + clue + "/messages").param("page", "2").session(ownerSession))
+                .andExpect(jsonPath("$.data.total").value(12)).andExpect(jsonPath("$.data.items.length()").value(2))
+                .andExpect(jsonPath("$.data.items[0].content").value("分页留言 10"));
+        send(ownerSession, post("/api/v1/items/" + item + "/resolve"), Map.of("expectedVersion", 1))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("VERSION_CONFLICT"));
+        send(ownerSession, post("/api/v1/items/" + item + "/resolve"), Map.of("expectedVersion", 2))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.closureReason").value("FOUND"));
+        mvc.perform(get("/api/v1/items/" + item)).andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/clues/" + clue).session(applicantSession))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.item.status").value("ARCHIVED"));
+        send(applicantSession, post("/api/v1/clues/" + clue + "/messages"), Map.of("content", "归档后消息"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CONVERSATION_CLOSED"));
+        send(otherSession, post("/api/v1/items/" + item + "/clues"), Map.of("content", "归档后再提供一条完整线索"))
+                .andExpect(status().isConflict());
+        mvc.perform(get("/api/v1/clues/" + clue + "/messages").session(applicantSession))
+                .andExpect(jsonPath("$.data.total").value(12));
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void sendingClueRacingArchiveCannotLeaveMessagesAfterClosure() throws Exception {
+        try {
+            String item = publish("LOST"); approve(item);
+            var clue = clues.create(applicant, Long.parseLong(item), "图书馆服务台有相同描述的物品");
+            List<String> outcomes = race(
+                    () -> clues.send(applicant, Long.parseLong(clue.id()), "服务台营业时间请向工作人员确认"),
+                    () -> clues.resolve(owner, Long.parseLong(item), 2));
+            assertThat(outcomes).contains("OK").allMatch(s -> s.equals("OK") || s.equals("CONVERSATION_CLOSED"));
+            assertThat(jdbc.queryForObject("SELECT status FROM items WHERE id=?", String.class, item)).isEqualTo("ARCHIVED");
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> clues.send(applicant, Long.parseLong(clue.id()), "结束后消息"))
+                    .isInstanceOf(BusinessException.class).extracting(e -> ((BusinessException)e).getErrorCode())
+                    .isEqualTo(com.campus.lostfound.common.error.ErrorCode.CONVERSATION_CLOSED);
+        } finally {cleanupCommittedFixtures();}
     }
 
     @Test void publicationClaimContactChangeAndHandoverStayConsistent() throws Exception {
@@ -214,8 +278,11 @@ class AbcWorkflowIntegrationTest {
     }
 
     private String publish() throws Exception {
+        return publish("FOUND");
+    }
+    private String publish(String type) throws Exception {
         String response = send(ownerSession, post("/api/v1/items"), Map.of(
-                "type", "FOUND", "category", "OTHER", "location", "图书馆", "occurredDate", "2026-11-01",
+                "type", type, "category", "OTHER", "location", "图书馆", "occurredDate", "2026-11-01",
                 "title", "甲乙丙联调测试物品", "description", "这是用于甲乙丙跨模块测试的虚构物品信息"))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         return JsonPath.read(response, "$.data.id");
@@ -242,6 +309,8 @@ class AbcWorkflowIntegrationTest {
     }
 
     private void cleanupCommittedFixtures() {
+        jdbc.update("DELETE m FROM clue_messages m JOIN clues c ON c.id=m.clue_id WHERE c.publisher_id=?", owner);
+        jdbc.update("DELETE FROM clues WHERE publisher_id=?", owner);
         jdbc.update("UPDATE items SET accepted_claim_id=NULL WHERE publisher_id=?", owner);
         jdbc.update("DELETE p FROM claim_contact_permissions p JOIN claims c ON c.id=p.claim_id WHERE c.publisher_id=?", owner);
         jdbc.update("DELETE m FROM claim_messages m JOIN claims c ON c.id=m.claim_id WHERE c.publisher_id=?", owner);
