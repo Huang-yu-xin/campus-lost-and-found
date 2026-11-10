@@ -37,7 +37,8 @@ async function load() {
   }
 }
 
-async function approve(row: AdminItem) {
+async function approve(rawRow: unknown) {
+  const row = rawRow as AdminItem
   actingId.value = row.id
   try {
     await http.post(`/admin/items/${row.id}/approve`)
@@ -50,7 +51,8 @@ async function approve(row: AdminItem) {
   }
 }
 
-async function returnItem(row: AdminItem) {
+async function returnItem(rawRow: unknown) {
+  const row = rawRow as AdminItem
   actingId.value = row.id
   try {
     const { value } = await ElMessageBox.prompt('请填写退回原因（发布者可见，必填）', '退回修改', {

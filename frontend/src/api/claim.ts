@@ -59,3 +59,65 @@ export function rejectClaim(claimId: number, reason: string): Promise<Claim> {
 export function completeClaim(claimId: number): Promise<Claim> {
   return http.post<Claim>(`/claims/${claimId}/complete`)
 }
+
+// ---------------- FR-19 留言 ----------------
+
+export interface Message {
+  id: number
+  sender: UserBrief
+  content: string
+  createdAt: string
+}
+
+export interface MessagePage {
+  items: Message[]
+  page: number
+  pageSize: number
+  total: number
+}
+
+export function listMessages(claimId: number, page = 1, pageSize = 50): Promise<MessagePage> {
+  return http.get<MessagePage>(`/claims/${claimId}/messages`, { params: { page, pageSize } })
+}
+
+export function sendMessage(claimId: number, content: string): Promise<Message> {
+  return http.post<Message>(`/claims/${claimId}/messages`, { content })
+}
+
+// ---------------- FR-06 联系方式授权 ----------------
+
+export interface ContactPermission {
+  claimId: number
+  phoneVisible: boolean
+  emailVisible: boolean
+  effective: boolean
+  version: number
+  updatedAt: string | null
+}
+
+export interface CounterpartyContact {
+  claimId: number
+  phone?: string
+  email?: string
+}
+
+export function getContactPermission(claimId: number): Promise<ContactPermission> {
+  return http.get<ContactPermission>(`/claims/${claimId}/contact-permission`)
+}
+
+export function setContactPermission(
+  claimId: number,
+  expectedVersion: number,
+  phoneVisible: boolean,
+  emailVisible: boolean,
+): Promise<ContactPermission> {
+  return http.put<ContactPermission>(`/claims/${claimId}/contact-permission`, {
+    expectedVersion,
+    phoneVisible,
+    emailVisible,
+  })
+}
+
+export function getCounterpartyContact(claimId: number): Promise<CounterpartyContact> {
+  return http.get<CounterpartyContact>(`/claims/${claimId}/counterparty-contact`)
+}

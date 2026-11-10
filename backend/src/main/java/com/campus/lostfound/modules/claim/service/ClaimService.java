@@ -26,9 +26,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class ClaimService {
 
     private final ClaimMapper mapper;
+    private final ContactPermissionService contactPermissionService;
 
-    public ClaimService(ClaimMapper mapper) {
+    public ClaimService(ClaimMapper mapper, ContactPermissionService contactPermissionService) {
         this.mapper = mapper;
+        this.contactPermissionService = contactPermissionService;
     }
 
     /** FR-15 提交认领申请。 */
@@ -114,6 +116,8 @@ public class ClaimService {
         if (mapper.bindAcceptedClaim(num(claim, "item_id"), claimId) == 0) {
             throw new BusinessException(ErrorCode.ITEM_STATE_CONFLICT, "物品状态已变化，无法确认");
         }
+        // 合同要求：唯一认领人确定后，同物品其他 PENDING 申请关闭
+        mapper.closeOtherPendingClaims(num(claim, "item_id"), claimId, "OTHER_ACCEPTED");
         writeLog(userId, "CLAIM", claimId, "CONFIRM_CLAIM", before, "CONFIRMED");
         return toView(mapper.findClaim(claimId));
     }
@@ -165,6 +169,8 @@ public class ClaimService {
             // 物品状态已被改动，整笔回滚，不留「申请已完成、物品仍在列表」的半状态
             throw new BusinessException(ErrorCode.ITEM_STATE_CONFLICT, "物品状态已变化，无法归档");
         }
+        // 交接完成后授权失效；即使旧页面仍持有开关，也必须按业务状态拒绝读取
+        contactPermissionService.revokeAllForClaim(claimId);
         writeLog(userId, "CLAIM", claimId, "COMPLETE_CLAIM", before, "COMPLETED");
         return toView(mapper.findClaim(claimId));
     }

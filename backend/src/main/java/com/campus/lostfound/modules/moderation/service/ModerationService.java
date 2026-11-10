@@ -98,6 +98,9 @@ public class ModerationService {
         if (mapper.takeDown(itemId) == 0) {
             throw new BusinessException(ErrorCode.ITEM_STATE_CONFLICT, "只有已发布的信息可以下架");
         }
+        // 违规下架同步关闭进行中的认领并让联系方式授权失效
+        mapper.closeClaimsForItem(itemId, text);
+        mapper.revokePermissionsForItem(itemId);
         record(operatorId, itemId, "TAKE_DOWN", text);
         logText(operatorId, itemId, "TAKE_DOWN_ITEM", "PUBLISHED", "OFF_SHELF", text);
         return detail(itemId);

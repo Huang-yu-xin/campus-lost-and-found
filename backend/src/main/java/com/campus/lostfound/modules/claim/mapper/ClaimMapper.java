@@ -16,6 +16,12 @@ public interface ClaimMapper {
             + "FROM items WHERE id = #{itemId}")
     Map<String, Object> findItem(@Param("itemId") long itemId);
 
+    /** 认领 + 所属物品状态，供留言、联系方式等私有会话接口做阶段判断。 */
+    @Select("SELECT c.id, c.item_id, c.publisher_id, c.applicant_id, c.status, "
+            + "i.status AS item_status, i.type AS item_type "
+            + "FROM claims c JOIN items i ON i.id = c.item_id WHERE c.id = #{claimId}")
+    Map<String, Object> findClaimContext(@Param("claimId") long claimId);
+
     /** 同一用户对同一物品只能有一个申请（含驳回/关闭历史）。 */
     @Select("SELECT id, status FROM claims WHERE item_id = #{itemId} AND applicant_id = #{applicantId}")
     Map<String, Object> findApplicantClaim(@Param("itemId") long itemId,
@@ -79,6 +85,38 @@ public interface ClaimMapper {
             + "JOIN items i ON i.id = c.item_id "
             + "WHERE c.publisher_id = #{userId} ORDER BY c.created_at DESC, c.id DESC")
     java.util.List<Map<String, Object>> listReceivedClaims(@Param("userId") long userId);
+
+    /** 认领会话留言总数。 */
+    @Select("SELECT COUNT(*) FROM claim_messages WHERE claim_id = #{claimId}")
+    long countMessages(@Param("claimId") long claimId);
+
+    /** 认领会话留言：按 createdAt、id 正序分页。 */
+    @Select("SELECT m.id, m.claim_id, m.sender_id, m.content, m.created_at, "
+            + "u.nickname AS sender_nickname FROM claim_messages m "
+            + "JOIN users u ON u.id = m.sender_id "
+            + "WHERE m.claim_id = #{claimId} ORDER BY m.created_at ASC, m.id ASC "
+            + "LIMIT #{limit} OFFSET #{offset}")
+    java.util.List<Map<String, Object>> listMessages(@Param("claimId") long claimId,
+                                                     @Param("limit") int limit,
+                                                     @Param("offset") int offset);
+
+    /** 单条留言，用于发送后回读发送人和时间。 */
+    @Select("SELECT m.id, m.claim_id, m.sender_id, m.content, m.created_at, "
+            + "u.nickname AS sender_nickname FROM claim_messages m "
+            + "JOIN users u ON u.id = m.sender_id WHERE m.id = #{messageId}")
+    Map<String, Object> findMessage(@Param("messageId") long messageId);
+
+    @Insert("INSERT INTO claim_messages (claim_id, sender_id, content) "
+            + "VALUES (#{claimId}, #{senderId}, #{content})")
+    @Options(useGeneratedKeys = true, keyProperty = "id")
+    int insertMessage(Map<String, Object> message);
+
+    /** 确认一名申请人后，其余 PENDING 申请按合同关闭。 */
+    @Update("UPDATE claims SET status='CLOSED', reason=#{reason} "
+            + "WHERE item_id=#{itemId} AND status='PENDING' AND id<>#{claimId}")
+    int closeOtherPendingClaims(@Param("itemId") long itemId,
+                                @Param("claimId") long claimId,
+                                @Param("reason") String reason);
 
     @Insert("INSERT INTO operation_logs "
             + "(actor_id, entity_type, entity_id, action, before_status, after_status, request_id) "

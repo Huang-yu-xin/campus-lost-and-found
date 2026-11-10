@@ -17,6 +17,31 @@ public final class ClaimDtos {
     public record RejectClaimRequest(String reason) {
     }
 
+    /** 发送认领留言的请求体：纯文本，1~1000 字。 */
+    public record SendMessageRequest(String content) {
+    }
+
+    /** 认领留言视图；sender 只含公开摘要，不含联系方式。 */
+    public record MessageView(long id, UserBrief sender, String content, LocalDateTime createdAt) {
+    }
+
+    /** 自己的联系方式授权设置，不含真实手机号和邮箱。 */
+    public record ContactPermissionView(
+            long claimId,
+            boolean phoneVisible,
+            boolean emailVisible,
+            boolean effective,
+            long version,
+            LocalDateTime updatedAt) {
+    }
+
+    /** 设置授权：expectedVersion 首次为 0，两个开关都为 false 表示撤回。 */
+    public record ContactPermissionRequest(
+            long expectedVersion,
+            boolean phoneVisible,
+            boolean emailVisible) {
+    }
+
     /** 用户摘要，contract 中的 Publisher 结构。 */
     public record UserBrief(long id, String nickname) {
     }

@@ -36,6 +36,17 @@ public interface ModerationMapper {
             + "closed_at=NOW(6) WHERE id=#{itemId} AND status='PUBLISHED'")
     int takeDown(@Param("itemId") long itemId);
 
+    /** 违规下架时关闭该物品仍在进行中的认领申请。 */
+    @Update("UPDATE claims SET status='CLOSED', reason=#{reason} "
+            + "WHERE item_id=#{itemId} AND status IN ('PENDING','CONFIRMED')")
+    int closeClaimsForItem(@Param("itemId") long itemId, @Param("reason") String reason);
+
+    /** 违规下架时清空该物品所有认领的授权并递增版本。 */
+    @Update("UPDATE claim_contact_permissions p JOIN claims c ON c.id = p.claim_id "
+            + "SET p.phone_visible=0, p.email_visible=0, p.version=p.version+1 "
+            + "WHERE c.item_id=#{itemId}")
+    int revokePermissionsForItem(@Param("itemId") long itemId);
+
     @Select("SELECT r.id, r.operator_id, r.action, r.reason, r.item_version, r.created_at, "
             + "u.nickname AS operator_nickname FROM review_records r "
             + "JOIN users u ON u.id = r.operator_id "
