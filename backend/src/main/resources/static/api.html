@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>校园失物招领系统 · 接口调试台</title>
+  <link rel="stylesheet" href="/swagger-ui/swagger-ui.css">
+  <style>
+    body { margin: 0; font-family: system-ui, "Microsoft YaHei", sans-serif; }
+    #tip { padding: 10px 16px; background: #eef4ff; color: #234; font-size: 13px;
+           border-bottom: 1px solid #d7e3f4; }
+    #err { display: none; padding: 16px; color: #b00020; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div id="tip">
+    接口文档地址：<code>/v3/api-docs</code>　·　写接口需要先调用
+    <code>/api/v1/dev/login?userId=1</code> 建立会话，再在右上角 Authorize 之外直接点 Try it out
+  </div>
+  <div id="err"></div>
+  <div id="swagger-ui"></div>
+
+  <script src="/swagger-ui/swagger-ui-bundle.js" charset="UTF-8"></script>
+  <script src="/swagger-ui/swagger-ui-standalone-preset.js" charset="UTF-8"></script>
+  <script>
+    (function () {
+      function fail(msg) {
+        var box = document.getElementById('err');
+        box.style.display = 'block';
+        box.textContent = '接口文档加载失败：' + msg + '　可直接访问 /v3/api-docs 查看原始 JSON。';
+      }
+      try {
+        window.ui = SwaggerUIBundle({
+          url: '/v3/api-docs',
+          dom_id: '#swagger-ui',
+          deepLinking: true,
+          presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+          plugins: [SwaggerUIBundle.plugins.DownloadUrl],
+          layout: 'StandaloneLayout',
+          validatorUrl: null,
+          withCredentials: true,
+          requestInterceptor: function (req) { return req; },
+          onComplete: function () { document.getElementById('tip').scrollIntoView(); }
+        });
+      } catch (e) {
+        fail(e.message);
+      }
+    })();
+  </script>
+</body>
+</html>

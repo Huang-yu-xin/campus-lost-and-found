@@ -4,6 +4,7 @@ import com.campus.lostfound.common.security.SecurityErrorHandler;
 import com.campus.lostfound.modules.account.mapper.UserMapper;
 import com.campus.lostfound.modules.account.security.AuthVersionFilter;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -38,20 +39,34 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectMapper objectMapper,
             CsrfTokenRepository csrfTokenRepository, SecurityContextRepository securityContextRepository,
-            UserMapper userMapper) throws Exception {
+            UserMapper userMapper,
+            @Value("${app.dev-login-enabled:false}") boolean devLoginEnabled) throws Exception {
         SecurityErrorHandler errorHandler = new SecurityErrorHandler(objectMapper);
 
         http
-                .csrf(csrf -> csrf.csrfTokenRepository(csrfTokenRepository))
+                .csrf(csrf -> {
+                    csrf.csrfTokenRepository(csrfTokenRepository);
+                    // 临时：开发期登录接口不校验 CSRF，关闭开关后此分支不执行
+                    if (devLoginEnabled) {
+                        csrf.ignoringRequestMatchers("/api/v1/dev/**");
+                    }
+                })
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.GET, "/api/v1/auth/csrf").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/email-codes",
-                                "/api/v1/auth/register").permitAll()
-                        // springdoc 仅在 dev 配置中开启，其他环境这些路径不存在
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers("/error").permitAll()
-                        .anyRequest().authenticated())
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(HttpMethod.GET, "/api/v1/auth/csrf").permitAll();
+                    auth.requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/email-codes",
+                            "/api/v1/auth/register").permitAll();
+                    // 临时：开发期登录放行，关闭开关后此分支不执行
+                    if (devLoginEnabled) {
+                        auth.requestMatchers("/api/v1/dev/**").permitAll();
+                    }
+                    // springdoc 仅在 dev 配置中开启，其他环境这些路径不存在
+                    auth.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
+                    // 接口调试页：只是静态外壳，数据仍由 /v3/api-docs 提供，不含任何业务数据
+                    auth.requestMatchers("/api.html", "/favicon.ico").permitAll();
+                    auth.requestMatchers("/error").permitAll();
+                    auth.anyRequest().authenticated();
+                })
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(errorHandler)
                         .accessDeniedHandler(errorHandler))
