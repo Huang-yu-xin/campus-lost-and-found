@@ -62,6 +62,8 @@ const contactEffective = computed(
 )
 
 const messages = ref<Message[]>([])
+const messagePage = ref(1)
+const messageTotal = ref(0)
 const messageText = ref('')
 const sending = ref(false)
 const loadingMessages = ref(false)
@@ -100,8 +102,9 @@ async function loadMessages() {
   loadingMessages.value = true
   messageError.value = ''
   try {
-    const page = await listMessages(claimId, 1, 50)
+    const page = await listMessages(claimId, messagePage.value, 10)
     messages.value = page.items
+    messageTotal.value = page.total
   } catch (error) {
     messageError.value = describeError(error)
   } finally {
@@ -116,6 +119,8 @@ async function submitMessage() {
   try {
     await sendMessage(claimId, text)
     messageText.value = ''
+    const latest = await listMessages(claimId, 1, 10)
+    messagePage.value = Math.max(1, Math.ceil(latest.total / 10))
     await loadMessages()
   } catch (error) {
     ElMessage.error(describeError(error))
@@ -306,6 +311,15 @@ onMounted(load)
             <p class="message-content">{{ message.content }}</p>
           </li>
         </ul>
+        <el-pagination
+          v-if="messageTotal > 0"
+          v-model:current-page="messagePage"
+          :total="messageTotal"
+          :page-size="10"
+          layout="prev, pager, next, total"
+          :disabled="loadingMessages || sending"
+          @current-change="loadMessages"
+        />
 
         <div class="message-editor">
           <el-input

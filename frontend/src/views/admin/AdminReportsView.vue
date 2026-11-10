@@ -27,6 +27,8 @@ const conversationVisible = ref(false)
 const conversation = ref<ReportConversation | null>(null)
 const conversationLoading = ref(false)
 const conversationError = ref('')
+const conversationPage = ref(1)
+const conversationReportId = ref<number>()
 
 const resolveVisible = ref(false)
 const resolving = ref(false)
@@ -84,12 +86,22 @@ async function openDetail(rawRow: unknown) {
 
 async function openConversation(rawRow: unknown) {
   const row = rawRow as Report
+  conversationReportId.value = row.id
+  conversationPage.value = 1
   conversationVisible.value = true
   conversation.value = null
+  await loadConversation()
+}
+async function loadConversation() {
+  if (!conversationReportId.value) return
   conversationError.value = ''
   conversationLoading.value = true
   try {
-    conversation.value = await getReportConversation(row.id)
+    conversation.value = await getReportConversation(
+      conversationReportId.value,
+      conversationPage.value,
+      10,
+    )
   } catch (error) {
     conversationError.value = describeError(error)
   } finally {
@@ -268,6 +280,14 @@ onMounted(load)
             <p class="message-content">{{ item.content }}</p>
           </li>
         </ul>
+        <el-pagination
+          v-model:current-page="conversationPage"
+          :total="conversation.total"
+          :page-size="10"
+          layout="prev, pager, next, total"
+          :disabled="conversationLoading"
+          @current-change="loadConversation"
+        />
       </template>
       <template #footer>
         <el-button @click="conversationVisible = false">关闭</el-button>
