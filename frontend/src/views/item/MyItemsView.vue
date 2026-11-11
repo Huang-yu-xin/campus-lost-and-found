@@ -134,6 +134,7 @@ async function resolve(item: ItemRecord) {
       v-model:current-page="page"
       :page-size="10"
       :total="total"
+      :pager-count="5"
       layout="prev, pager, next"
       :disabled="loading || !!busyId"
       @current-change="load"

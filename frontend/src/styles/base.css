@@ -110,6 +110,15 @@ img {
   white-space: pre-wrap;
 }
 
+.record-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--el-color-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 /* 页面内容居中，左右留白；手机上缩小留白 */
 .container {
   width: 100%;

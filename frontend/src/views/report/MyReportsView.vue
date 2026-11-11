@@ -60,7 +60,43 @@ onMounted(load)
     <el-empty v-else-if="rows.length === 0" description="还没有提交过举报" />
 
     <template v-else>
-      <el-table :data="rows" border style="width: 100%">
+      <div class="mobile-records" aria-label="举报记录">
+        <article v-for="row in rows" :key="row.id" class="record-card">
+          <header>
+            <h2>举报 #{{ row.id }}</h2>
+            <el-tag :type="row.status === 'RESOLVED' ? 'success' : 'warning'">{{
+              statusText[row.status] ?? row.status
+            }}</el-tag>
+          </header>
+          <dl>
+            <dt>物品编号</dt>
+            <dd>{{ row.itemId }}</dd>
+            <dt>关联会话</dt>
+            <dd>
+              {{
+                row.claimId
+                  ? `认领 #${row.claimId}`
+                  : row.clueId
+                    ? `线索 #${row.clueId}`
+                    : '公开物品'
+              }}
+            </dd>
+            <dt>举报理由</dt>
+            <dd>{{ row.reason }}</dd>
+            <dt>处理结果</dt>
+            <dd>
+              {{
+                row.status === 'PENDING'
+                  ? '等待管理员处理'
+                  : `${actionText[row.action ?? ''] ?? row.action}：${row.resolution}`
+              }}
+            </dd>
+            <dt>提交时间</dt>
+            <dd>{{ formatTime(row.createdAt) }}</dd>
+          </dl>
+        </article>
+      </div>
+      <el-table class="desktop-records" :data="rows" border style="width: 100%">
         <el-table-column prop="id" label="举报编号" width="100" />
         <el-table-column prop="itemId" label="物品" width="90" />
         <el-table-column label="关联会话" width="120">
@@ -97,6 +133,7 @@ onMounted(load)
         :current-page="page"
         :page-size="pageSize"
         :total="total"
+        :pager-count="5"
         @current-change="changePage"
       />
     </template>
@@ -109,6 +146,8 @@ onMounted(load)
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 .head h1 {
   margin: 0;
