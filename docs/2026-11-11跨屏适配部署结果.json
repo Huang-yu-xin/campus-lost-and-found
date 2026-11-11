@@ -1,0 +1,224 @@
+{
+  "date": "2026-11-11",
+  "userApprovedPublication": true,
+  "applicationCommit": "93c144e5f6f2c512c9528cb61dbd34f2e91fb925",
+  "githubBranch": "main",
+  "deployment": {
+    "commit": "93c144e5f6f2c512c9528cb61dbd34f2e91fb925",
+    "previousRelease": "/srv/campus-lost-found/releases/5842ff7-20261110T160933Z",
+    "createdAt": "2026-11-11T12:51:53.924220+00:00",
+    "change": "Responsive frontend and matching source snapshot",
+    "backendChanged": false,
+    "databaseMigrations": [],
+    "backup": "/root/rivermind-data/campus-lost-found-backups/20261111T125153Z",
+    "bundleSha256": "e3a89037060c921f7cecdc1321249d93189e8dcd6567a41ba39f63b6ced8e2d8",
+    "preserveOldHashedAssets": true,
+    "release": "/srv/campus-lost-found/releases/93c144e-20261111T125153Z",
+    "countsBefore": {
+      "users": 4,
+      "items": 44,
+      "claims": 21,
+      "clues": 15,
+      "reports": 6,
+      "images": 1
+    },
+    "countsAfter": {
+      "users": 4,
+      "items": 44,
+      "claims": 21,
+      "clues": 15,
+      "reports": 6,
+      "images": 1
+    },
+    "sharedFilesUnchanged": true,
+    "backendPidUnchanged": true,
+    "staticAssetHashesVerified": true,
+    "localHealth": "OK",
+    "status": "deployed"
+  },
+  "authenticatedReadOnlySmoke": {
+    "status": "OK",
+    "scope": "Server-local HTTP through Nginx, normal login/CSRF/Session; existing records read only; no business records created or modified",
+    "actors": [
+      {
+        "actor": "student1",
+        "role": "STUDENT",
+        "login": "OK",
+        "me": "OK",
+        "listsAndPrivateDetails": {
+          "/me/items": {
+            "total": 16,
+            "returned": 10
+          },
+          "/me/claims": {
+            "total": 8,
+            "returned": 8
+          },
+          "/me/received-claims": {
+            "total": 7,
+            "returned": 7
+          },
+          "/me/clues": {
+            "total": 8,
+            "returned": 8
+          },
+          "/me/received-clues": {
+            "total": 5,
+            "returned": 5
+          },
+          "/me/reports": {
+            "total": 2,
+            "returned": 2
+          }
+        },
+        "logout": "OK"
+      },
+      {
+        "actor": "student2",
+        "role": "STUDENT",
+        "login": "OK",
+        "me": "OK",
+        "listsAndPrivateDetails": {
+          "/me/items": {
+            "total": 14,
+            "returned": 10
+          },
+          "/me/claims": {
+            "total": 7,
+            "returned": 7
+          },
+          "/me/received-claims": {
+            "total": 7,
+            "returned": 7
+          },
+          "/me/clues": {
+            "total": 5,
+            "returned": 5
+          },
+          "/me/received-clues": {
+            "total": 5,
+            "returned": 5
+          },
+          "/me/reports": {
+            "total": 2,
+            "returned": 2
+          }
+        },
+        "logout": "OK"
+      },
+      {
+        "actor": "student3",
+        "role": "STUDENT",
+        "login": "OK",
+        "me": "OK",
+        "listsAndPrivateDetails": {
+          "/me/items": {
+            "total": 14,
+            "returned": 10
+          },
+          "/me/claims": {
+            "total": 6,
+            "returned": 6
+          },
+          "/me/received-claims": {
+            "total": 7,
+            "returned": 7
+          },
+          "/me/clues": {
+            "total": 2,
+            "returned": 2
+          },
+          "/me/received-clues": {
+            "total": 5,
+            "returned": 5
+          },
+          "/me/reports": {
+            "total": 2,
+            "returned": 2
+          }
+        },
+        "logout": "OK"
+      },
+      {
+        "actor": "admin",
+        "role": "ADMIN",
+        "login": "OK",
+        "me": "OK",
+        "listsAndPrivateDetails": {
+          "/admin/items?status=PENDING_REVIEW&page=1&pageSize=10": {
+            "total": 7,
+            "returned": 7
+          },
+          "/admin/reports?status=PENDING&page=1&pageSize=10": {
+            "total": 4,
+            "returned": 4
+          }
+        },
+        "logout": "OK"
+      }
+    ]
+  },
+  "publicHttpsCheck": {
+    "site": "https://lch4id8sf57x1tv9-18080.sh03-webservice.gpuhome.cc:8443",
+    "status": "OK",
+    "results": [
+      {
+        "url": "/login",
+        "width": 360,
+        "status": 200,
+        "viewport": 360,
+        "documentWidth": 360
+      },
+      {
+        "url": "/register",
+        "width": 360,
+        "status": 200,
+        "viewport": 360,
+        "documentWidth": 360
+      },
+      {
+        "url": "/items",
+        "width": 360,
+        "status": 200,
+        "viewport": 360,
+        "documentWidth": 360
+      },
+      {
+        "url": "/api/v1/items",
+        "width": 360,
+        "status": 200,
+        "publishedCount": 24
+      },
+      {
+        "url": "/login",
+        "width": 1440,
+        "status": 200,
+        "viewport": 1440,
+        "documentWidth": 1440
+      },
+      {
+        "url": "/register",
+        "width": 1440,
+        "status": 200,
+        "viewport": 1440,
+        "documentWidth": 1440
+      },
+      {
+        "url": "/items",
+        "width": 1440,
+        "status": 200,
+        "viewport": 1440,
+        "documentWidth": 1440
+      },
+      {
+        "url": "/api/v1/items",
+        "width": 1440,
+        "status": 200,
+        "publishedCount": 24
+      }
+    ],
+    "pageErrors": [],
+    "scope": "Public HTTPS pages with live API; no mocked responses"
+  },
+  "physicalPhoneResults": "尚未单独记录实体手机与系统软键盘实测，不将浏览器视口检查等同于实机通过"
+}
