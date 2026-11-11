@@ -16,11 +16,13 @@ import {
 import { describeError } from '@/api/feedback'
 import type { ItemRecord } from '@/api/items'
 import { formatTime } from '@/utils/time'
+import { useMediaQuery } from '@/composables/useMediaQuery'
 
 const STATUSES: AdminItemStatus[] = ['PENDING_REVIEW', 'RETURNED', 'PUBLISHED']
 const PAGE_SIZE = 10
 
 const route = useRoute()
+const narrow = useMediaQuery('(max-width: 768px)')
 const initialStatus = STATUSES.find((value) => value === route.query.status) ?? 'PENDING_REVIEW'
 
 const rows = ref<ItemRecord[]>([])
@@ -173,51 +175,55 @@ async function takeDown(rawRow: unknown) {
 
     <el-empty v-else-if="rows.length === 0" description="这个状态下没有待处理的信息" />
 
-    <el-table v-else :data="rows" border>
-      <el-table-column prop="title" label="标题" min-width="180" />
-      <el-table-column label="类型" width="90">
-        <template #default="{ row }">{{ typeText[row.type] ?? row.type }}</template>
-      </el-table-column>
-      <el-table-column prop="location" label="地点" width="140" />
-      <el-table-column prop="publisher.nickname" label="发布者" width="110" />
-      <el-table-column label="提交时间" width="200">
-        <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
-      </el-table-column>
-      <el-table-column
-        v-if="status === 'RETURNED'"
-        prop="reviewReason"
-        label="退回原因"
-        min-width="200"
-      />
-      <el-table-column label="操作" width="220" fixed="right">
-        <template #default="{ row }">
-          <el-button link type="primary" @click="showDetail(row)">查看详情</el-button>
-          <template v-if="status === 'PENDING_REVIEW'">
-            <el-button link type="success" :loading="actingId === row.id" @click="approve(row)"
-              >通过</el-button
+    <template v-else>
+      <p v-if="narrow" class="hint">表格可左右滑动，查看完整信息与操作。</p>
+      <el-table :data="rows" border>
+        <el-table-column prop="title" label="标题" min-width="180" />
+        <el-table-column label="类型" width="90">
+          <template #default="{ row }">{{ typeText[row.type] ?? row.type }}</template>
+        </el-table-column>
+        <el-table-column prop="location" label="地点" width="140" />
+        <el-table-column prop="publisher.nickname" label="发布者" width="110" />
+        <el-table-column label="提交时间" width="200">
+          <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
+        </el-table-column>
+        <el-table-column
+          v-if="status === 'RETURNED'"
+          prop="reviewReason"
+          label="退回原因"
+          min-width="200"
+        />
+        <el-table-column label="操作" width="220" :fixed="narrow ? false : 'right'">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="showDetail(row)">查看详情</el-button>
+            <template v-if="status === 'PENDING_REVIEW'">
+              <el-button link type="success" :loading="actingId === row.id" @click="approve(row)"
+                >通过</el-button
+              >
+              <el-button link type="warning" :loading="actingId === row.id" @click="returnItem(row)"
+                >退回</el-button
+              >
+            </template>
+            <el-button
+              v-else-if="status === 'PUBLISHED'"
+              link
+              type="danger"
+              :disabled="!!actingId"
+              @click="takeDown(row)"
+              >下架</el-button
             >
-            <el-button link type="warning" :loading="actingId === row.id" @click="returnItem(row)"
-              >退回</el-button
-            >
+            <span v-else class="muted">已退回，等待发布者修改</span>
           </template>
-          <el-button
-            v-else-if="status === 'PUBLISHED'"
-            link
-            type="danger"
-            :disabled="!!actingId"
-            @click="takeDown(row)"
-            >下架</el-button
-          >
-          <span v-else class="muted">已退回，等待发布者修改</span>
-        </template>
-      </el-table-column>
-    </el-table>
+        </el-table-column>
+      </el-table>
+    </template>
     <el-pagination
       v-if="total > PAGE_SIZE"
       v-model:current-page="page"
       class="pager"
       :page-size="PAGE_SIZE"
       :total="total"
+      :pager-count="5"
       layout="prev, pager, next, total"
       :disabled="loading || !!actingId"
       @current-change="load"
@@ -250,6 +256,7 @@ async function takeDown(rawRow: unknown) {
           small
           :page-size="PAGE_SIZE"
           :total="recordTotal"
+          :pager-count="5"
           layout="prev, pager, next"
           @current-change="changeRecordPage"
         />
@@ -264,6 +271,8 @@ async function takeDown(rawRow: unknown) {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 .head h1 {
   margin: 0;

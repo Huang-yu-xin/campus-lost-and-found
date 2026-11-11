@@ -11,6 +11,9 @@ import {
 } from '@/api/reports'
 import type { Report, ReportAction, ReportConversation, ReportStatus } from '@/api/reports'
 import { formatTime } from '@/utils/time'
+import { useMediaQuery } from '@/composables/useMediaQuery'
+
+const narrow = useMediaQuery('(max-width: 768px)')
 
 const status = ref<ReportStatus>('PENDING')
 const rows = ref<Report[]>([])
@@ -160,6 +163,7 @@ onMounted(load)
     <el-empty v-else-if="rows.length === 0" description="当前没有举报记录" />
 
     <template v-else>
+      <p v-if="narrow" class="hint">表格可左右滑动，查看完整信息与操作。</p>
       <el-table :data="rows" border style="width: 100%">
         <el-table-column prop="id" label="编号" width="80" />
         <el-table-column prop="itemId" label="物品" width="80" />
@@ -181,7 +185,7 @@ onMounted(load)
         <el-table-column label="提交时间" width="170">
           <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="230" fixed="right">
+        <el-table-column label="操作" width="230" :fixed="narrow ? false : 'right'">
           <template #default="{ row }">
             <el-button link type="primary" @click="openDetail(row)">详情</el-button>
             <el-button
@@ -208,12 +212,18 @@ onMounted(load)
         :current-page="page"
         :page-size="pageSize"
         :total="total"
+        :pager-count="5"
         @current-change="changePage"
       />
     </template>
 
     <!-- 举报详情 -->
-    <el-drawer v-model="drawerVisible" title="举报详情" size="480px">
+    <el-drawer
+      v-model="drawerVisible"
+      title="举报详情"
+      size="min(480px, calc(100vw - 16px))"
+      class="report-drawer"
+    >
       <el-skeleton v-if="selectedLoading" :rows="6" animated />
       <el-descriptions v-else-if="selected" :column="1" border>
         <el-descriptions-item label="举报编号">{{ selected.id }}</el-descriptions-item>
@@ -243,7 +253,11 @@ onMounted(load)
     </el-drawer>
 
     <!-- 关联会话（受限读取） -->
-    <el-dialog v-model="conversationVisible" title="举报关联会话" width="620px">
+    <el-dialog
+      v-model="conversationVisible"
+      title="举报关联会话"
+      width="min(620px, calc(100vw - 32px))"
+    >
       <el-alert
         v-if="conversationError"
         :title="conversationError"
@@ -253,14 +267,14 @@ onMounted(load)
       />
       <el-skeleton v-else-if="conversationLoading" :rows="5" animated />
       <template v-else-if="conversation">
-        <el-descriptions :column="2" border class="conversation-meta">
+        <el-descriptions :column="narrow ? 1 : 2" border class="conversation-meta">
           <el-descriptions-item label="类型">
             {{ conversation.kind === 'CLAIM' ? '认领' : '线索' }}
           </el-descriptions-item>
           <el-descriptions-item label="上下文编号">{{
             conversation.contextId
           }}</el-descriptions-item>
-          <el-descriptions-item label="凭证正文" :span="2">
+          <el-descriptions-item label="凭证正文" :span="narrow ? 1 : 2">
             {{ conversation.evidenceText }}
           </el-descriptions-item>
         </el-descriptions>
@@ -279,6 +293,7 @@ onMounted(load)
           v-model:current-page="conversationPage"
           :total="conversation.total"
           :page-size="10"
+          :pager-count="5"
           layout="prev, pager, next, total"
           :disabled="conversationLoading"
           @current-change="loadConversation"
@@ -290,8 +305,11 @@ onMounted(load)
     </el-dialog>
 
     <!-- 处理举报 -->
-    <el-dialog v-model="resolveVisible" title="处理举报" width="520px">
-      <el-form label-width="100px">
+    <el-dialog v-model="resolveVisible" title="处理举报" width="min(520px, calc(100vw - 32px))">
+      <el-form
+        :label-width="narrow ? undefined : '100px'"
+        :label-position="narrow ? 'top' : 'right'"
+      >
         <el-form-item label="举报编号">{{ selected?.id }}</el-form-item>
         <el-form-item label="处置动作">
           <el-select v-model="resolveForm.action" style="width: 100%">
@@ -330,6 +348,7 @@ onMounted(load)
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 .head h1 {
   margin: 0;
@@ -339,6 +358,7 @@ onMounted(load)
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 .pager {
   margin-top: 16px;
@@ -372,10 +392,22 @@ onMounted(load)
   justify-content: space-between;
   font-size: 13px;
   color: var(--app-text-secondary, #666);
+  flex-wrap: wrap;
+  gap: 4px 12px;
 }
 .message-content {
   margin: 6px 0 0;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.conversation-meta :deep(.el-descriptions__table),
+.report-drawer :deep(.el-descriptions__table) {
+  table-layout: fixed;
+}
+
+.conversation-meta :deep(.el-descriptions__label),
+.report-drawer :deep(.el-descriptions__label) {
+  width: 88px;
 }
 </style>
