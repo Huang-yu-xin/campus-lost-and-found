@@ -12,8 +12,8 @@ afterEach(() => vi.unstubAllGlobals())
 it('手机菜单支持展开、Escape 返回焦点，页面跳转后关闭且保留登录状态', async () => {
   vi.stubGlobal('matchMedia', () => ({
     matches: true,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
+    addEventListener: vi.fn<() => void>(),
+    removeEventListener: vi.fn<() => void>(),
   }))
   const router = createRouter({
     history: createMemoryHistory(),
