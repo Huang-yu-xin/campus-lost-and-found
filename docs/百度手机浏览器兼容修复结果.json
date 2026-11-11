@@ -1,0 +1,284 @@
+{
+  "date": "2026-11-11",
+  "commit": "fbb4095637eca66acfbf471e19ac6a0266afa025",
+  "issue": "百度手机版直接输入网址，导航挤成窄竖列；用户未开启电脑版网页",
+  "cause": "生产压缩将传统 max-width 媒体查询变为 width<= 的范围语法，较旧解析器会忽略规则块；模拟已复现相同失效机制，未取得真实手机的内核版本",
+  "cssTarget": "chrome87",
+  "scope": "CSS 输出兼容目标，不代表该版本全部 JS/Web API 实测支持",
+  "buildCheck": {
+    "status": "passed",
+    "cssFiles": 18,
+    "forbiddenRangeQueries": 0,
+    "requiredMaxWidthBreakpoints": [
+      400,
+      640,
+      768
+    ]
+  },
+  "lint": "passed",
+  "typeChecks": "passed",
+  "uniqueBrowserScenarios": 25,
+  "browserExecutions": 50,
+  "browserRuns": [
+    {
+      "browser": "Chrome",
+      "report": "frontend/test-results/legacy-chrome-results.json",
+      "startTime": "2026-11-11T13:06:26.918Z",
+      "duration": 42523.155,
+      "expected": 25,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    {
+      "browser": "Edge",
+      "report": "frontend/test-results/legacy-edge-results.json",
+      "startTime": "2026-11-11T13:06:55.724Z",
+      "duration": 43372.431,
+      "expected": 25,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    }
+  ],
+  "reproduction": {
+    "viewport": 390,
+    "mockedAccount": true,
+    "ignoreRangeQuerySyntax": true,
+    "before": {
+      "headerHeight": 336.90625,
+      "menuVisible": false,
+      "ignoredQueries": 7
+    },
+    "after": {
+      "headerHeight": 113,
+      "menuVisible": true,
+      "ignoredQueries": 0
+    },
+    "publicAfter": {
+      "headerHeight": 113,
+      "menuVisible": true,
+      "ignoredQueries": 0,
+      "documentWidth": 390,
+      "scope": "公网真实 CSS，账号接口为虚构数据"
+    }
+  },
+  "deployment": {
+    "commit": "fbb4095637eca66acfbf471e19ac6a0266afa025",
+    "previousRelease": "/srv/campus-lost-found/releases/93c144e-20261111T125153Z",
+    "createdAt": "2026-11-11T13:09:09.512810+00:00",
+    "change": "Responsive frontend and matching source snapshot",
+    "backendChanged": false,
+    "databaseMigrations": [],
+    "backup": "/root/rivermind-data/campus-lost-found-backups/20261111T130909Z",
+    "bundleSha256": "b28faba90f54052ab75c654c215fd8dab564b5740e69a152fceb2dc9da8f0c00",
+    "preserveOldHashedAssets": true,
+    "release": "/srv/campus-lost-found/releases/css-compat-fbb4095-20261111T130909Z",
+    "countsBefore": {
+      "users": 4,
+      "items": 44,
+      "claims": 21,
+      "clues": 15,
+      "reports": 6,
+      "images": 1
+    },
+    "countsAfter": {
+      "users": 4,
+      "items": 44,
+      "claims": 21,
+      "clues": 15,
+      "reports": 6,
+      "images": 1
+    },
+    "sharedFilesUnchanged": true,
+    "backendPidUnchanged": true,
+    "staticAssetHashesVerified": true,
+    "localHealth": "OK",
+    "status": "deployed"
+  },
+  "publicHttps": {
+    "site": "https://lch4id8sf57x1tv9-18080.sh03-webservice.gpuhome.cc:8443",
+    "status": "OK",
+    "results": [
+      {
+        "url": "/login",
+        "width": 360,
+        "status": 200,
+        "viewport": 360,
+        "documentWidth": 360
+      },
+      {
+        "url": "/register",
+        "width": 360,
+        "status": 200,
+        "viewport": 360,
+        "documentWidth": 360
+      },
+      {
+        "url": "/items",
+        "width": 360,
+        "status": 200,
+        "viewport": 360,
+        "documentWidth": 360
+      },
+      {
+        "url": "/api/v1/items",
+        "width": 360,
+        "status": 200,
+        "publishedCount": 24
+      },
+      {
+        "url": "/login",
+        "width": 1440,
+        "status": 200,
+        "viewport": 1440,
+        "documentWidth": 1440
+      },
+      {
+        "url": "/register",
+        "width": 1440,
+        "status": 200,
+        "viewport": 1440,
+        "documentWidth": 1440
+      },
+      {
+        "url": "/items",
+        "width": 1440,
+        "status": 200,
+        "viewport": 1440,
+        "documentWidth": 1440
+      },
+      {
+        "url": "/api/v1/items",
+        "width": 1440,
+        "status": 200,
+        "publishedCount": 24
+      }
+    ],
+    "pageErrors": [],
+    "scope": "Public HTTPS pages with live API; no mocked responses"
+  },
+  "authenticatedReadOnlySmoke": {
+    "status": "OK",
+    "scope": "Server-local HTTP through Nginx, normal login/CSRF/Session; existing records read only; no business records created or modified",
+    "actors": [
+      {
+        "actor": "student1",
+        "role": "STUDENT",
+        "login": "OK",
+        "me": "OK",
+        "listsAndPrivateDetails": {
+          "/me/items": {
+            "total": 16,
+            "returned": 10
+          },
+          "/me/claims": {
+            "total": 8,
+            "returned": 8
+          },
+          "/me/received-claims": {
+            "total": 7,
+            "returned": 7
+          },
+          "/me/clues": {
+            "total": 8,
+            "returned": 8
+          },
+          "/me/received-clues": {
+            "total": 5,
+            "returned": 5
+          },
+          "/me/reports": {
+            "total": 2,
+            "returned": 2
+          }
+        },
+        "logout": "OK"
+      },
+      {
+        "actor": "student2",
+        "role": "STUDENT",
+        "login": "OK",
+        "me": "OK",
+        "listsAndPrivateDetails": {
+          "/me/items": {
+            "total": 14,
+            "returned": 10
+          },
+          "/me/claims": {
+            "total": 7,
+            "returned": 7
+          },
+          "/me/received-claims": {
+            "total": 7,
+            "returned": 7
+          },
+          "/me/clues": {
+            "total": 5,
+            "returned": 5
+          },
+          "/me/received-clues": {
+            "total": 5,
+            "returned": 5
+          },
+          "/me/reports": {
+            "total": 2,
+            "returned": 2
+          }
+        },
+        "logout": "OK"
+      },
+      {
+        "actor": "student3",
+        "role": "STUDENT",
+        "login": "OK",
+        "me": "OK",
+        "listsAndPrivateDetails": {
+          "/me/items": {
+            "total": 14,
+            "returned": 10
+          },
+          "/me/claims": {
+            "total": 6,
+            "returned": 6
+          },
+          "/me/received-claims": {
+            "total": 7,
+            "returned": 7
+          },
+          "/me/clues": {
+            "total": 2,
+            "returned": 2
+          },
+          "/me/received-clues": {
+            "total": 5,
+            "returned": 5
+          },
+          "/me/reports": {
+            "total": 2,
+            "returned": 2
+          }
+        },
+        "logout": "OK"
+      },
+      {
+        "actor": "admin",
+        "role": "ADMIN",
+        "login": "OK",
+        "me": "OK",
+        "listsAndPrivateDetails": {
+          "/admin/items?status=PENDING_REVIEW&page=1&pageSize=10": {
+            "total": 7,
+            "returned": 7
+          },
+          "/admin/reports?status=PENDING&page=1&pageSize=10": {
+            "total": 4,
+            "returned": 4
+          }
+        },
+        "logout": "OK"
+      }
+    ]
+  },
+  "userPhoneRecheck": "等待用户在百度手机版关闭旧页后重新打开验证；未提前标记实机通过"
+}

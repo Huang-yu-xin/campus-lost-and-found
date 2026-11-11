@@ -11,7 +11,8 @@
     "loginPageStatus": 200,
     "scope": "仅启动与连通性检查，不代表真实业务人工验收"
   },
-  "status": "自动化检查通过，用户已确认发布；93c144e 已推送 GitHub 并部署；实体手机实测结果待记录",
+  "status": "初版自动化与发布通过；已根据百度手机版反馈部署 fbb4095 兼容修复，修复后设备显示待用户复核",
+  "compatibilityFixRecord": "docs/百度手机浏览器兼容修复结果.json",
   "deploymentRecord": "docs/2026-11-11跨屏适配部署结果.json",
   "scope": "生产构建的前端布局与交互，全部接口为虚构数据拦截，不代表真实后端业务验收",
   "browserVersions": {
