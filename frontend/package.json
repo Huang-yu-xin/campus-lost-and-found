@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "test:unit": "vitest",
     "test:browser": "npm run build && tsc --noEmit -p tsconfig.e2e.json && playwright test",
-    "build-only": "vite build",
+    "build-only": "vite build && node scripts/check-css-compatibility.mjs",
     "type-check": "vue-tsc --build",
     "lint": "run-s \"lint:*\"",
     "lint:oxlint": "oxlint . --fix",

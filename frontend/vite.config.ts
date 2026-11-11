@@ -7,6 +7,11 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [vue(), vueDevTools()],
+  build: {
+    // 部分手机内置浏览器不支持媒体查询范围语法；避免将 max-width 改成 width<=。
+    // 这是 CSS 输出目标，不代表已验证该版本的全部 JS/Web API。
+    cssTarget: 'chrome87',
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
