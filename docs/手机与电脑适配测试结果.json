@@ -1,0 +1,342 @@
+{
+  "date": "2026-11-11",
+  "timezone": "Asia/Shanghai",
+  "sourceCommit": "5a3a585",
+  "screenshotCommit": "adcd74d",
+  "localConnectivity": {
+    "backendPort": 8080,
+    "previewPort": 4173,
+    "backendCsrfStatus": 200,
+    "previewCsrfStatus": 200,
+    "loginPageStatus": 200,
+    "scope": "仅启动与连通性检查，不代表真实业务人工验收"
+  },
+  "status": "自动化检查通过，等待用户与实体手机验收；未推送 GitHub、未部署",
+  "scope": "生产构建的前端布局与交互，全部接口为虚构数据拦截，不代表真实后端业务验收",
+  "browserVersions": {
+    "chrome": "157.0.8103.50",
+    "msedge": "157.0.4341.42"
+  },
+  "viewportWidths": [
+    360,
+    390,
+    414,
+    640,
+    641,
+    768,
+    769,
+    1024,
+    1440
+  ],
+  "unitTests": {
+    "tests": 33,
+    "failed": 0
+  },
+  "lint": "通过",
+  "typeCheck": "通过",
+  "browserTestTypeCheck": "通过",
+  "productionBuild": "通过，保留现有大体积 chunk 提示",
+  "browserScenarioCount": 24,
+  "browserExecutionCount": 48,
+  "runs": [
+    {
+      "localReport": "frontend/test-results/chrome-results.json",
+      "startedAt": "2026-11-11T09:12:49.219Z",
+      "durationMs": 31433.401,
+      "passed": 23,
+      "failed": 0,
+      "skipped": 0,
+      "flaky": 0,
+      "cases": [
+        {
+          "name": "学生页面 360px 不产生整页横向溢出",
+          "browser": "chrome",
+          "status": "passed"
+        },
+        {
+          "name": "学生页面 390px 不产生整页横向溢出",
+          "browser": "chrome",
+          "status": "passed"
+        },
+        {
+          "name": "学生页面 414px 不产生整页横向溢出",
+          "browser": "chrome",
+          "status": "passed"
+        },
+        {
+          "name": "学生页面 640px 不产生整页横向溢出",
+          "browser": "chrome",
+          "status": "passed"
+        },
+        {
+          "name": "学生页面 641px 不产生整页横向溢出",
+          "browser": "chrome",
+          "status": "passed"
+        },
+        {
+          "name": "学生页面 768px 不产生整页横向溢出",
+          "browser": "chrome",
+          "status": "passed"
+        },
+        {
+          "name": "学生页面 769px 不产生整页横向溢出",
+          "browser": "chrome",
+          "status": "passed"
+        },
+        {
+          "name": "学生页面 1024px 不产生整页横向溢出",
+          "browser": "chrome",
+          "status": "passed"
+        },
+        {
+          "name": "学生页面 1440px 不产生整页横向溢出",
+          "browser": "chrome",
+          "status": "passed"
+        },
+        {
+          "name": "手机菜单支持触控、键盘关闭和跳转，旋转后不会留下不可见入口",
+          "browser": "chrome",
+          "status": "passed"
+        },
+        {
+          "name": "记录切换卡片与表格不重新查询，筛选与页码保持且详情可达",
+          "browser": "chrome",
+          "status": "passed"
+        },
+        {
+          "name": "/me/clues 的手机卡片保留正文、状态或方向及分页",
+          "browser": "chrome",
+          "status": "passed"
+        },
+        {
+          "name": "/reports 的手机卡片保留正文、状态或方向及分页",
+          "browser": "chrome",
+          "status": "passed"
+        },
+        {
+          "name": "个人资料的输入、验证码倒计时与保存操作跨宽度保持",
+          "browser": "chrome",
+          "status": "passed"
+        },
+        {
+          "name": "手机注册校验、验证码和登录跳转可操作，输入跨宽度保持",
+          "browser": "chrome",
+          "status": "passed"
+        },
+        {
+          "name": "留言输入与页码跨宽度保持，发送只调用一次",
+          "browser": "chrome",
+          "status": "passed"
+        },
+        {
+          "name": "管理端 360px 表格局部滚动，详情、会话与处理弹层可操作",
+          "browser": "chrome",
+          "status": "passed"
+        },
+        {
+          "name": "管理端 390px 表格局部滚动，详情、会话与处理弹层可操作",
+          "browser": "chrome",
+          "status": "passed"
+        },
+        {
+          "name": "管理端 768px 表格局部滚动，详情、会话与处理弹层可操作",
+          "browser": "chrome",
+          "status": "passed"
+        },
+        {
+          "name": "管理端 769px 表格局部滚动，详情、会话与处理弹层可操作",
+          "browser": "chrome",
+          "status": "passed"
+        },
+        {
+          "name": "管理端 1440px 表格局部滚动，详情、会话与处理弹层可操作",
+          "browser": "chrome",
+          "status": "passed"
+        },
+        {
+          "name": "手机 empty 状态内容不溢出且不显示旧记录",
+          "browser": "chrome",
+          "status": "passed"
+        },
+        {
+          "name": "手机 error 状态内容不溢出且不显示旧记录",
+          "browser": "chrome",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "localReport": "frontend/test-results/chrome-touch-results.json",
+      "startedAt": "2026-11-11T09:14:27.248Z",
+      "durationMs": 4575.585,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "flaky": 0,
+      "cases": [
+        {
+          "name": "触屏模拟下菜单、个人卡片与详情可达，横竖屏切换保留草稿",
+          "browser": "chrome",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "localReport": "frontend/test-results/edge-results.json",
+      "startedAt": "2026-11-11T09:14:04.974Z",
+      "durationMs": 36260.034,
+      "passed": 24,
+      "failed": 0,
+      "skipped": 0,
+      "flaky": 0,
+      "cases": [
+        {
+          "name": "触屏模拟下菜单、个人卡片与详情可达，横竖屏切换保留草稿",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "学生页面 360px 不产生整页横向溢出",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "学生页面 390px 不产生整页横向溢出",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "学生页面 414px 不产生整页横向溢出",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "学生页面 640px 不产生整页横向溢出",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "学生页面 641px 不产生整页横向溢出",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "学生页面 768px 不产生整页横向溢出",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "学生页面 769px 不产生整页横向溢出",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "学生页面 1024px 不产生整页横向溢出",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "学生页面 1440px 不产生整页横向溢出",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "手机菜单支持触控、键盘关闭和跳转，旋转后不会留下不可见入口",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "记录切换卡片与表格不重新查询，筛选与页码保持且详情可达",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "/me/clues 的手机卡片保留正文、状态或方向及分页",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "/reports 的手机卡片保留正文、状态或方向及分页",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "个人资料的输入、验证码倒计时与保存操作跨宽度保持",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "手机注册校验、验证码和登录跳转可操作，输入跨宽度保持",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "留言输入与页码跨宽度保持，发送只调用一次",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "管理端 360px 表格局部滚动，详情、会话与处理弹层可操作",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "管理端 390px 表格局部滚动，详情、会话与处理弹层可操作",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "管理端 768px 表格局部滚动，详情、会话与处理弹层可操作",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "管理端 769px 表格局部滚动，详情、会话与处理弹层可操作",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "管理端 1440px 表格局部滚动，详情、会话与处理弹层可操作",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "手机 empty 状态内容不溢出且不显示旧记录",
+          "browser": "msedge",
+          "status": "passed"
+        },
+        {
+          "name": "手机 error 状态内容不溢出且不显示旧记录",
+          "browser": "msedge",
+          "status": "passed"
+        }
+      ]
+    }
+  ],
+  "baseline": {
+    "revision": "f9cbdbb",
+    "page": "/me/claims",
+    "viewportWidth": 390,
+    "documentScrollWidth": 403,
+    "data": "虚构布局测试数据"
+  },
+  "corrected": {
+    "page": "/me/claims",
+    "viewportWidth": 390,
+    "documentScrollWidth": 390
+  },
+  "manualPhoneAcceptance": {
+    "status": "待用户执行",
+    "device": null,
+    "system": null,
+    "browser": null,
+    "result": null
+  },
+  "screenshotRecheck": {
+    "report": "frontend/test-results/screenshot-results.json",
+    "passed": 4,
+    "failed": 0,
+    "startedAt": "2026-11-11T09:19:45.424Z",
+    "notes": "等待校验与临时提示稳定后的重复检查，不增加独立用例数"
+  }
+}
