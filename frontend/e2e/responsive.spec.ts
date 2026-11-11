@@ -8,6 +8,10 @@ async function noOverflow(page: Page) {
 }
 
 async function capture(page: Page, testInfo: TestInfo, label: string) {
+  // Element Plus 的消息在鼠标悬停时暂停关闭；移开指针后等待真实消失。
+  await page.mouse.move(0, (page.viewportSize()?.height ?? 900) - 1)
+  await expect(page.locator('.el-message')).toHaveCount(0)
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
   await testInfo.attach(label, {
     body: await page.screenshot({ fullPage: false, animations: 'disabled' }),
     contentType: 'image/png',
@@ -178,6 +182,8 @@ test('手机注册校验、验证码和登录跳转可操作，输入跨宽度�
   await expect(page.getByRole('textbox', { name: /学号$/ })).toHaveValue('20260001')
   await page.setViewportSize({ width: 390, height: 844 })
   await noOverflow(page)
+  await page.locator('h1').click()
+  await expect(page.locator('.el-form-item__error')).toHaveCount(0)
   await capture(page, testInfo, 'register-390')
   await page.getByRole('button', { name: '注册', exact: true }).click()
   await expect(page).toHaveURL(/\/login\?account=20260001/)
