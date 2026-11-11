@@ -30,6 +30,86 @@ a {
   text-decoration: none;
 }
 
+:focus-visible {
+  outline: 2px solid var(--el-color-primary, #409eff);
+  outline-offset: 3px;
+}
+
+main,
+section,
+article {
+  min-width: 0;
+}
+
+h1,
+h2,
+h3,
+p,
+dd,
+.el-descriptions__content,
+.el-alert__content,
+.el-dialog__body,
+.el-drawer__body {
+  overflow-wrap: anywhere;
+}
+
+img {
+  max-width: 100%;
+}
+
+.el-pagination {
+  max-width: 100%;
+  flex-wrap: wrap;
+  gap: 4px 0;
+  white-space: normal;
+}
+
+.el-dialog,
+.el-message-box {
+  max-width: calc(100vw - 32px);
+}
+
+/* 手机卡片与电脑表格共享数据和事件，由 CSS 切换，不重复发起请求。 */
+.mobile-records {
+  display: none;
+}
+
+.record-card {
+  padding: 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+  overflow-wrap: anywhere;
+}
+
+.record-card header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.record-card h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.record-card dl {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0;
+}
+
+.record-card dt {
+  color: var(--app-text-secondary);
+}
+
+.record-card dd {
+  margin: 0 0 8px;
+  white-space: pre-wrap;
+}
+
 /* 页面内容居中，左右留白；手机上缩小留白 */
 .container {
   width: 100%;
@@ -43,5 +123,61 @@ a {
   .container {
     padding-left: 16px;
     padding-right: 16px;
+  }
+
+  .desktop-records {
+    display: none;
+  }
+
+  .mobile-records {
+    display: grid;
+    gap: 12px;
+    margin: 16px 0;
+  }
+
+  .el-card {
+    --el-card-padding: 16px;
+  }
+
+  .el-button,
+  .el-input__wrapper,
+  .el-select__wrapper,
+  .el-radio-button__inner,
+  .el-checkbox {
+    min-height: 44px;
+  }
+
+  .el-radio-button__inner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .el-button + .el-button {
+    margin-left: 0;
+  }
+
+  .el-pagination .btn-prev,
+  .el-pagination .btn-next,
+  .el-pagination .el-pager li {
+    min-height: 44px;
+  }
+
+  .el-pagination__total {
+    flex-basis: 100%;
+    margin: 4px 0 0;
+  }
+
+  .el-dialog {
+    margin-top: 5vh;
+    --el-dialog-padding-primary: 16px;
+  }
+
+  .el-dialog__footer,
+  .el-message-box__btns {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
   }
 }

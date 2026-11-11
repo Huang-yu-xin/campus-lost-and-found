@@ -1,11 +1,28 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import { showError } from '@/api/feedback'
 import { useAuthStore } from '@/stores/auth'
+import { useMediaQuery } from '@/composables/useMediaQuery'
 
 const auth = useAuthStore()
 const router = useRouter()
+const route = useRoute()
+const compact = useMediaQuery('(max-width: 640px)')
+const menuOpen = ref(false)
+const menuButton = ref<HTMLButtonElement>()
+
+function closeMenu(restoreFocus = false) {
+  menuOpen.value = false
+  if (restoreFocus) menuButton.value?.focus()
+}
+
+watch(
+  () => route.fullPath,
+  () => closeMenu(),
+)
+watch(compact, () => closeMenu())
 
 async function logout() {
   try {
@@ -20,9 +37,25 @@ async function logout() {
 <template>
   <div class="student-layout">
     <header class="site-header">
-      <div class="container header-inner">
+      <div class="container header-inner" @keydown.esc.stop="closeMenu(true)">
         <RouterLink to="/" class="brand">校园失物招领</RouterLink>
-        <nav class="nav">
+        <button
+          ref="menuButton"
+          class="menu-toggle"
+          type="button"
+          aria-controls="student-navigation"
+          :aria-expanded="menuOpen"
+          @click="menuOpen = !menuOpen"
+        >
+          {{ menuOpen ? '收起菜单' : '展开菜单' }}
+        </button>
+        <nav
+          id="student-navigation"
+          class="nav"
+          :class="{ 'is-open': menuOpen }"
+          aria-label="学生端导航"
+          @click="closeMenu()"
+        >
           <RouterLink to="/">首页</RouterLink>
           <RouterLink :to="{ name: 'items' }">浏览物品</RouterLink>
           <RouterLink v-if="!auth.isAdmin" :to="{ name: 'item-publish' }">发布信息</RouterLink>
@@ -69,6 +102,17 @@ async function logout() {
   min-height: 56px;
 }
 
+.menu-toggle {
+  display: none;
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  padding: 8px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
 .brand {
   white-space: nowrap;
   font-size: 18px;
@@ -91,13 +135,18 @@ async function logout() {
 
 .user-area {
   display: flex;
-  flex-shrink: 0;
+  min-width: 0;
+  max-width: 280px;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
 }
 
 .nickname {
   color: var(--app-text-secondary);
+  overflow-wrap: anywhere;
+  min-width: 0;
+  max-width: 14em;
 }
 
 .page {
@@ -105,26 +154,57 @@ async function logout() {
   padding-bottom: 48px;
 }
 
-/* 手机窄屏：导航换到第二行，保证可点击区域足够大 */
+/* 手机使用可键盘操作的展开导航，保留所有原入口。 */
 @media (max-width: 640px) {
   .header-inner {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px 16px;
     padding-top: 8px;
     padding-bottom: 8px;
   }
 
   .nav {
-    order: 3;
-    flex-basis: 100%;
+    display: none;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 12px;
+  }
+
+  .nav.is-open {
+    display: grid;
   }
 
   .nav a {
-    padding: 8px 0;
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 8px;
+    border-radius: 4px;
+  }
+
+  .menu-toggle {
+    display: block;
+    min-height: 44px;
+    grid-column: 2;
+    grid-row: 1;
   }
 
   .user-area {
-    margin-left: auto;
+    grid-row: 2;
+    grid-column: 1 / -1;
+    max-width: none;
+  }
+
+  .nickname {
+    max-width: none;
+    flex: 1;
+  }
+
+  .user-area > a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
   }
 }
 </style>

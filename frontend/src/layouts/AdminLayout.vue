@@ -21,7 +21,7 @@ async function logout() {
   <div class="admin-layout">
     <aside class="sidebar">
       <RouterLink to="/admin" class="brand">管理后台</RouterLink>
-      <nav class="menu">
+      <nav class="menu" aria-label="管理端导航">
         <RouterLink to="/admin">概览</RouterLink>
         <RouterLink to="/admin/items">物品审核</RouterLink>
         <RouterLink to="/admin/reports">举报处理</RouterLink>
@@ -84,6 +84,8 @@ async function logout() {
   gap: 4px;
   font-size: 13px;
   color: var(--app-text-secondary);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* 管理端以表格为主，内容区留出横向空间；表格过宽时由表格自身横向滚动 */
@@ -113,12 +115,26 @@ async function logout() {
     flex-direction: row;
     flex-basis: 100%;
     order: 3;
+    flex-wrap: wrap;
   }
 
   .sidebar-footer {
     flex-direction: row;
     gap: 12px;
     margin-left: auto;
+    flex-wrap: wrap;
+    flex: 1 1 100%;
+  }
+
+  .sidebar-footer > span {
+    flex: 1 1 100%;
+  }
+
+  .menu a,
+  .sidebar-footer a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
   }
 
   .content {
