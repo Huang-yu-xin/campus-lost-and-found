@@ -130,5 +130,9 @@ h1 {
   .login-page {
     padding-top: 8px;
   }
+
+  .switch {
+    margin-bottom: 0;
+  }
 }
 </style>

@@ -369,7 +369,16 @@ onBeforeUnmount(() => clearInterval(timer))
 
 <style scoped>
 .profile-page {
+  width: 100%;
   max-width: 640px;
+}
+
+.profile-page :deep(.el-descriptions__table) {
+  table-layout: fixed;
+}
+
+.profile-page :deep(.el-descriptions__label) {
+  width: 100px;
 }
 
 h1 {
@@ -395,10 +404,28 @@ h1 {
   display: flex;
   gap: 8px;
   width: 100%;
+  min-width: 0;
+}
+
+.code-row .el-input {
+  flex: 1;
+  min-width: 0;
 }
 
 .code-row .el-button {
   flex-shrink: 0;
   width: 112px;
+}
+
+@media (max-width: 400px) {
+  .code-row {
+    flex-wrap: wrap;
+  }
+
+  .code-row .el-input,
+  .code-row .el-button {
+    flex-basis: 100%;
+    width: 100%;
+  }
 }
 </style>

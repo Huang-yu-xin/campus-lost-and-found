@@ -240,6 +240,12 @@ h1 {
   display: flex;
   gap: 8px;
   width: 100%;
+  min-width: 0;
+}
+
+.code-row .el-input {
+  flex: 1;
+  min-width: 0;
 }
 
 .code-row .el-button {
@@ -265,6 +271,18 @@ h1 {
 @media (max-width: 640px) {
   .register-page {
     padding-top: 8px;
+  }
+}
+
+@media (max-width: 400px) {
+  .code-row {
+    flex-wrap: wrap;
+  }
+
+  .code-row .el-input,
+  .code-row .el-button {
+    flex-basis: 100%;
+    width: 100%;
   }
 }
 </style>

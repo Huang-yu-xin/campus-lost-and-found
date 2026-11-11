@@ -157,6 +157,12 @@ img {
     margin-left: 0;
   }
 
+  /* 保持输入文字可读，也避免手机聚焦输入框时自动放大页面。 */
+  input,
+  textarea {
+    font-size: 16px;
+  }
+
   .el-pagination .btn-prev,
   .el-pagination .btn-next,
   .el-pagination .el-pager li {
