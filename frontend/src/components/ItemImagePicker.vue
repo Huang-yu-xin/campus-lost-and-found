@@ -84,4 +84,10 @@ img {
   color: var(--app-text-secondary);
   font-size: 14px;
 }
+
+input[type='file'] {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+}
 </style>

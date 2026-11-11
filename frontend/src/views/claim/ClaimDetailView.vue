@@ -20,9 +20,11 @@ import { createReport } from '@/api/reports'
 import { useAuthStore } from '@/stores/auth'
 import { ITEM_STATUS_LABELS } from '@/types/domain'
 import { formatTime } from '@/utils/time'
+import { useMediaQuery } from '@/composables/useMediaQuery'
 
 const route = useRoute()
 const auth = useAuthStore()
+const narrow = useMediaQuery('(max-width: 768px)')
 
 const claimId = String(route.params.claimId)
 const detail = ref<ClaimDetail | null>(null)
@@ -254,7 +256,7 @@ onMounted(load)
           </div>
         </template>
 
-        <el-descriptions :column="2" border>
+        <el-descriptions :column="narrow ? 1 : 2" border>
           <el-descriptions-item label="申请人">{{
             detail.claim.applicant.nickname
           }}</el-descriptions-item>
@@ -265,13 +267,17 @@ onMounted(load)
           <el-descriptions-item label="物品状态">{{
             ITEM_STATUS_LABELS[detail.item.status] ?? detail.item.status
           }}</el-descriptions-item>
-          <el-descriptions-item label="认领凭证" :span="2">
+          <el-descriptions-item label="认领凭证" :span="narrow ? 1 : 2">
             {{ detail.claim.description }}
           </el-descriptions-item>
-          <el-descriptions-item v-if="detail.claim.reason" label="驳回/关闭原因" :span="2">
+          <el-descriptions-item
+            v-if="detail.claim.reason"
+            label="驳回/关闭原因"
+            :span="narrow ? 1 : 2"
+          >
             {{ detail.claim.reason }}
           </el-descriptions-item>
-          <el-descriptions-item label="提交时间" :span="2">{{
+          <el-descriptions-item label="提交时间" :span="narrow ? 1 : 2">{{
             formatTime(detail.claim.createdAt)
           }}</el-descriptions-item>
         </el-descriptions>
@@ -314,6 +320,7 @@ onMounted(load)
           v-model:current-page="messagePage"
           :total="messageTotal"
           :page-size="10"
+          :pager-count="5"
           layout="prev, pager, next, total"
           :disabled="loadingMessages || sending"
           @current-change="loadMessages"
@@ -370,7 +377,12 @@ onMounted(load)
             :closable="false"
             show-icon
           />
-          <el-form v-else label-width="120px" class="permission-form">
+          <el-form
+            v-else
+            :label-width="narrow ? undefined : '120px'"
+            :label-position="narrow ? 'top' : 'right'"
+            class="permission-form"
+          >
             <el-form-item label="授权对方查看">
               <el-checkbox v-model="permissionForm.phoneVisible">我的手机号</el-checkbox>
               <el-checkbox v-model="permissionForm.emailVisible">我的邮箱</el-checkbox>
@@ -464,10 +476,13 @@ onMounted(load)
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .actions {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
 }
 .hint {
   margin: 0;
@@ -493,6 +508,8 @@ onMounted(load)
   justify-content: space-between;
   font-size: 13px;
   color: var(--app-text-secondary, #666);
+  flex-wrap: wrap;
+  gap: 4px 12px;
 }
 .message-sender {
   font-weight: 600;
@@ -522,6 +539,7 @@ onMounted(load)
   align-items: center;
   gap: 12px;
   margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 .contact-result {
   margin-top: 12px;
@@ -531,5 +549,25 @@ onMounted(load)
   align-items: center;
   gap: 12px;
   margin: 8px 0 24px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .claim-detail :deep(.el-descriptions__table) {
+    table-layout: fixed;
+  }
+
+  .claim-detail :deep(.el-descriptions__label) {
+    width: 88px;
+  }
+
+  .editor-foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .editor-foot .el-button {
+    align-self: flex-end;
+  }
 }
 </style>

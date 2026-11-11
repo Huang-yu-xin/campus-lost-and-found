@@ -241,5 +241,14 @@ input[type='date'] {
   min-height: 32px;
   padding: 4px 8px;
   font: inherit;
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 640px) {
+  input[type='date'] {
+    min-height: 44px;
+    width: 100%;
+  }
 }
 </style>

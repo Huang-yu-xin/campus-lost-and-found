@@ -128,6 +128,7 @@ watch(id, load, { immediate: true })
         v-model:current-page="page"
         :page-size="10"
         :total="total"
+        :pager-count="5"
         layout="prev, pager, next, total"
         @current-change="loadMessages"
       />

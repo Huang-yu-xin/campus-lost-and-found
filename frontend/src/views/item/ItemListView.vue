@@ -102,6 +102,7 @@ onMounted(() => load(1))
         :current-page="page"
         :total="total"
         :page-size="10"
+        :pager-count="5"
         layout="prev, pager, next"
         @current-change="load"
       />
@@ -136,5 +137,33 @@ onMounted(() => load(1))
 .items li p {
   margin-bottom: 0;
   color: var(--app-text-secondary);
+}
+
+@media (max-width: 640px) {
+  .filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filters label {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .filters input[type='date'] {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+  }
+
+  .filters > .el-button {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 400px) {
+  .filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 </style>

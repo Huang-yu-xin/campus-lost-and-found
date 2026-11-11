@@ -201,7 +201,7 @@ watch(
 <style scoped>
 dl {
   display: grid;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: max-content minmax(0, 1fr);
   gap: 8px 16px;
 }
 dd {
