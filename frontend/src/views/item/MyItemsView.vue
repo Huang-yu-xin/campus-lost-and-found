@@ -2,6 +2,8 @@
 import { onMounted, ref, watch } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { describeError } from '@/api/feedback'
+import { restoreFocus } from '@/utils/restoreFocus'
+import ResultSummary from '@/components/ResultSummary.vue'
 import { listOwnItems, withdrawItem, type ItemRecord } from '@/api/items'
 import { ITEM_STATUS_LABELS, type ItemStatus } from '@/types/domain'
 import { resolveLostItem } from '@/api/clues'
@@ -16,6 +18,7 @@ const statusFilter = ref<ItemStatus | ''>('')
 async function load() {
   loading.value = true
   errorMessage.value = ''
+  const previous = document.activeElement
   try {
     const result = await listOwnItems(page.value, statusFilter.value || undefined)
     items.value = result.items
@@ -24,11 +27,12 @@ async function load() {
     errorMessage.value = describeError(error)
   } finally {
     loading.value = false
+    await restoreFocus(previous)
   }
 }
 async function withdraw(item: ItemRecord) {
   if (busyId.value) return
-  busyId.value = item.id
+  const previous = document.activeElement
   try {
     await ElMessageBox.confirm(
       '下架后公开列表将不再显示，且不能再次编辑。确定下架吗？',
@@ -37,14 +41,17 @@ async function withdraw(item: ItemRecord) {
         confirmButtonText: '确定下架',
         cancelButtonText: '取消',
         type: 'warning',
+        autofocus: false,
       },
     )
+    busyId.value = item.id
     await withdrawItem(item.id, item.version)
     await load()
   } catch (error) {
     if (error !== 'cancel' && error !== 'close') errorMessage.value = describeError(error)
   } finally {
     busyId.value = ''
+    await restoreFocus(previous)
   }
 }
 onMounted(load)
@@ -55,15 +62,19 @@ watch(statusFilter, () => {
 })
 async function resolve(item: ItemRecord) {
   if (busyId.value) return
-  busyId.value = item.id
+  const previous = document.activeElement
   try {
-    await ElMessageBox.confirm('确认已找回？归档后停止接收线索和留言。', '标记已找回')
+    await ElMessageBox.confirm('确认已找回？归档后停止接收线索和留言。', '标记已找回', {
+      autofocus: false,
+    })
+    busyId.value = item.id
     await resolveLostItem(item.id, item.version)
     await load()
   } catch (e) {
     if (e !== 'cancel' && e !== 'close') errorMessage.value = describeError(e)
   } finally {
     busyId.value = ''
+    await restoreFocus(previous)
   }
 }
 </script>
@@ -72,16 +83,23 @@ async function resolve(item: ItemRecord) {
   <section>
     <h1>我的发布</h1>
     <p>修改信息后需要重新审核。有待确认或已确认认领时不能修改。</p>
+    <ResultSummary
+      name="发布记录"
+      :loading="loading"
+      :failed="!!errorMessage"
+      :total="total"
+      :page="page"
+    />
     <el-alert v-if="errorMessage" :title="errorMessage" type="error" :closable="false" />
     <div class="toolbar">
       <el-select
         v-model="statusFilter"
         placeholder="全部状态"
-        clearable
         aria-label="按状态筛选"
         :disabled="loading || !!busyId"
         style="width: 180px"
       >
+        <el-option value="" label="全部状态" />
         <el-option
           v-for="(text, value) in ITEM_STATUS_LABELS"
           :key="value"
@@ -91,7 +109,7 @@ async function resolve(item: ItemRecord) {
       </el-select>
       <el-button :disabled="loading || !!busyId" @click="load">刷新列表</el-button>
     </div>
-    <p v-if="loading" role="status">正在加载…</p>
+    <p v-if="loading" aria-hidden="true">正在加载…</p>
     <p v-else-if="!items.length">
       {{ statusFilter ? `暂无${ITEM_STATUS_LABELS[statusFilter]}的发布记录。` : '暂无发布记录。' }}
     </p>
@@ -107,7 +125,12 @@ async function resolve(item: ItemRecord) {
         >标记已找回</el-button
       >
       <div class="images">
-        <img v-for="image in item.images" :key="image.id" :src="image.url" alt="物品图片" />
+        <img
+          v-for="(image, index) in item.images"
+          :key="image.id"
+          :src="image.url"
+          :alt="`${item.title}，图片 ${index + 1}`"
+        />
       </div>
       <el-alert
         v-if="item.reviewReason"
@@ -130,6 +153,8 @@ async function resolve(item: ItemRecord) {
       </div>
     </article>
     <el-pagination
+      role="navigation"
+      aria-label="我的发布分页"
       v-if="total > 10"
       v-model:current-page="page"
       :page-size="10"

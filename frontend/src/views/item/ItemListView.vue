@@ -2,6 +2,7 @@
 import { onMounted, reactive, ref } from 'vue'
 
 import { describeError } from '@/api/feedback'
+import { restoreFocus } from '@/utils/restoreFocus'
 import { listItems, type ItemFilters, type PublicItem } from '@/api/items'
 import { CATEGORY_LABELS, ITEM_TYPE_LABELS } from '@/types/domain'
 
@@ -19,20 +20,24 @@ const total = ref(0)
 const page = ref(1)
 const loading = ref(false)
 const errorMessage = ref('')
+const searched = ref(false)
 
 async function load(nextPage: number) {
   if (loading.value) return
   loading.value = true
   errorMessage.value = ''
+  const previous = document.activeElement
   try {
     const result = await listItems(nextPage, appliedFilters)
     items.value = result.items
     total.value = result.total
     page.value = result.page
+    searched.value = true
   } catch (error) {
     errorMessage.value = describeError(error)
   } finally {
     loading.value = false
+    await restoreFocus(previous)
   }
 }
 
@@ -48,7 +53,7 @@ onMounted(() => load(1))
 <template>
   <section>
     <h1>浏览物品</h1>
-    <form class="filters" @submit.prevent="search">
+    <form class="filters" role="search" aria-label="搜索公开物品" @submit.prevent="search">
       <label
         >关键词
         <el-input v-model="filters.keyword" aria-label="关键词" placeholder="搜索标题或描述"
@@ -82,7 +87,13 @@ onMounted(() => load(1))
       <label>结束日期 <input v-model="filters.dateTo" type="date" /></label>
       <el-button native-type="submit" type="primary" :loading="loading">搜索</el-button>
     </form>
-    <p v-if="loading" role="status">正在加载物品…</p>
+    <p class="visually-hidden" role="status">
+      <template v-if="loading">正在加载物品</template>
+      <template v-else-if="searched && !errorMessage">
+        {{ total ? `共 ${total} 条物品信息，当前第 ${page} 页` : '没有符合条件的公开物品' }}
+      </template>
+    </p>
+    <p v-if="loading" aria-hidden="true">正在加载物品…</p>
     <el-alert v-else-if="errorMessage" :title="errorMessage" type="error" :closable="false" />
     <el-empty v-else-if="items.length === 0" description="没有符合条件的公开物品" />
     <template v-else>
@@ -97,16 +108,18 @@ onMounted(() => load(1))
           </p>
         </li>
       </ul>
-      <el-pagination
-        v-if="total > 10"
-        :current-page="page"
-        :total="total"
-        :page-size="10"
-        :pager-count="5"
-        layout="prev, pager, next"
-        @current-change="load"
-      />
     </template>
+    <el-pagination
+      v-if="total > 10"
+      role="navigation"
+      aria-label="物品搜索结果分页"
+      :current-page="page"
+      :total="total"
+      :page-size="10"
+      :pager-count="5"
+      layout="prev, pager, next"
+      @current-change="load"
+    />
   </section>
 </template>
 

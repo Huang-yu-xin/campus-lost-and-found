@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 
 import { describeError } from '@/api/feedback'
+import { restoreFocus } from '@/utils/restoreFocus'
+import { askForText } from '@/composables/useTextPrompt'
 import { getItem, type PublicItem } from '@/api/items'
 import { createClaim } from '@/api/claim'
 import { createClue } from '@/api/clues'
@@ -19,17 +21,19 @@ const item = ref<PublicItem>()
 const errorMessage = ref('')
 const claimDescription = ref('')
 const claimError = ref('')
+const invalidDescription = ref(false)
 const submittingClaim = ref(false)
 const reporting = ref(false)
 const clueContent = ref('')
 async function submitClue() {
   if (!item.value || submittingClaim.value) return
   if (textLength(clueContent.value.trim()) < 10 || textLength(clueContent.value.trim()) > 500) {
-    claimError.value = '请填写 10～500 字的线索'
+    await showDescriptionError('clue-content', '请填写 10～500 字的线索')
     return
   }
   submittingClaim.value = true
   claimError.value = ''
+  const previous = document.activeElement
   try {
     const clue = await createClue(item.value.id, clueContent.value.trim())
     await router.push({ name: 'clue-detail', params: { clueId: clue.id } })
@@ -37,6 +41,7 @@ async function submitClue() {
     claimError.value = describeError(e)
   } finally {
     submittingClaim.value = false
+    await restoreFocus(previous)
   }
 }
 const isOwner = computed(() => item.value?.publisher.id === auth.me?.id)
@@ -53,11 +58,12 @@ async function submitClaim() {
   if (!item.value || !canClaim.value || submittingClaim.value) return
   const description = claimDescription.value.trim()
   if (textLength(description) < 10 || textLength(description) > 500) {
-    claimError.value = '请填写 10～500 字的物品特征说明'
+    await showDescriptionError('claim-description', '请填写 10～500 字的物品特征说明')
     return
   }
   submittingClaim.value = true
   claimError.value = ''
+  const previous = document.activeElement
   try {
     const claim = await createClaim(item.value.id, description)
     await router.push({ name: 'claim-detail', params: { claimId: String(claim.id) } })
@@ -65,27 +71,44 @@ async function submitClaim() {
     claimError.value = describeError(error)
   } finally {
     submittingClaim.value = false
+    await restoreFocus(previous)
   }
 }
 
 async function reportItem() {
   if (!item.value || reporting.value) return
-  reporting.value = true
+  const previous = document.activeElement
   try {
-    const { value } = await ElMessageBox.prompt('请填写举报理由（1～500 字）', '举报物品信息', {
+    const { value } = await askForText('请填写举报理由（1～500 字）', '举报物品信息', {
       inputValidator: (value: string) =>
         textLength(value?.trim() ?? '') >= 1 && textLength(value?.trim() ?? '') <= 500
           ? true
           : '请填写 1～500 字的举报理由',
     })
+    reporting.value = true
     await createReport({ itemId: item.value.id, reason: value.trim() })
     ElMessage.success('举报已提交，可在“我的举报”查看处理进度')
   } catch (error) {
     if (error !== 'cancel' && error !== 'close') ElMessage.error(describeError(error))
   } finally {
     reporting.value = false
+    await restoreFocus(previous)
   }
 }
+
+async function showDescriptionError(field: string, message: string) {
+  invalidDescription.value = true
+  claimError.value = message
+  await nextTick()
+  document.getElementById(field)?.focus()
+}
+
+function clearDescriptionError() {
+  if (!invalidDescription.value) return
+  invalidDescription.value = false
+  claimError.value = ''
+}
+
 watch(
   () => route.params.itemId,
   async (id, _, onCleanup) => {
@@ -96,7 +119,9 @@ watch(
     item.value = undefined
     errorMessage.value = ''
     claimDescription.value = ''
+    clueContent.value = ''
     claimError.value = ''
+    invalidDescription.value = false
     try {
       const result = await getItem(String(id))
       if (active) item.value = result
@@ -111,9 +136,9 @@ watch(
 <template>
   <section>
     <RouterLink :to="{ name: 'items' }">返回物品列表</RouterLink>
+    <h1>{{ item?.title ?? '物品详情' }}</h1>
     <el-alert v-if="errorMessage" :title="errorMessage" type="error" :closable="false" />
     <article v-else-if="item">
-      <h1>{{ item.title }}</h1>
       <dl>
         <dt>类型</dt>
         <dd>{{ ITEM_TYPE_LABELS[item.type] }}</dd>
@@ -133,7 +158,7 @@ watch(
           v-for="(image, index) in item.images"
           :key="image.id"
           :src="image.url"
-          :alt="`物品图片 ${index + 1}`"
+          :alt="`${item.title}，图片 ${index + 1}`"
         />
       </div>
       <section v-if="item.type === 'FOUND'" class="claim-section">
@@ -154,8 +179,18 @@ watch(
             type="textarea"
             :rows="3"
             :disabled="submittingClaim"
+            aria-required="true"
+            :aria-invalid="invalidDescription || undefined"
+            :aria-describedby="claimError ? 'claim-description-error' : undefined"
+            @input="clearDescriptionError"
           />
-          <el-alert v-if="claimError" :title="claimError" type="error" :closable="false" />
+          <el-alert
+            v-if="claimError"
+            id="claim-description-error"
+            :title="claimError"
+            type="error"
+            :closable="false"
+          />
           <el-button native-type="submit" type="primary" :loading="submittingClaim"
             >提交认领申请</el-button
           >
@@ -186,8 +221,18 @@ watch(
             type="textarea"
             :rows="3"
             :disabled="submittingClaim"
+            aria-required="true"
+            :aria-invalid="invalidDescription || undefined"
+            :aria-describedby="claimError ? 'clue-content-error' : undefined"
+            @input="clearDescriptionError"
           />
-          <el-alert v-if="claimError" :title="claimError" type="error" :closable="false" />
+          <el-alert
+            v-if="claimError"
+            id="clue-content-error"
+            :title="claimError"
+            type="error"
+            :closable="false"
+          />
           <el-button native-type="submit" type="primary" :loading="submittingClaim"
             >提交线索</el-button
           >

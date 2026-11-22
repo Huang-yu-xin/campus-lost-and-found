@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { nextTick, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 
 import { describeError } from '@/api/feedback'
+import ResultSummary from '@/components/ResultSummary.vue'
 import {
   getAdminReport,
   getReportConversation,
@@ -12,6 +13,7 @@ import {
 import type { Report, ReportAction, ReportConversation, ReportStatus } from '@/api/reports'
 import { formatTime } from '@/utils/time'
 import { useMediaQuery } from '@/composables/useMediaQuery'
+import { restoreFocus } from '@/utils/restoreFocus'
 
 const narrow = useMediaQuery('(max-width: 768px)')
 
@@ -36,6 +38,8 @@ const conversationReportId = ref<string>()
 
 const resolveVisible = ref(false)
 const resolving = ref(false)
+const resolveError = ref('')
+let resolveOpener: Element | null = null
 const resolveForm = reactive<{ action: ReportAction; reason: string }>({
   action: 'KEEP',
   reason: '',
@@ -51,6 +55,7 @@ const actionText: Record<string, string> = {
 async function load() {
   loading.value = true
   errorText.value = ''
+  const previous = document.activeElement
   try {
     const result = await listAdminReports(status.value, page.value, pageSize)
     rows.value = result.items
@@ -59,6 +64,7 @@ async function load() {
     errorText.value = describeError(error)
   } finally {
     loading.value = false
+    await restoreFocus(previous)
   }
 }
 
@@ -94,6 +100,7 @@ async function loadConversation() {
   if (!conversationReportId.value) return
   conversationError.value = ''
   conversationLoading.value = true
+  const previous = document.activeElement
   try {
     conversation.value = await getReportConversation(
       conversationReportId.value,
@@ -104,6 +111,7 @@ async function loadConversation() {
     conversationError.value = describeError(error)
   } finally {
     conversationLoading.value = false
+    await restoreFocus(previous)
   }
 }
 
@@ -112,14 +120,18 @@ function openResolve(rawRow: unknown) {
   selected.value = row
   resolveForm.action = 'KEEP'
   resolveForm.reason = ''
+  resolveError.value = ''
+  resolveOpener = document.activeElement
   resolveVisible.value = true
 }
 
 async function submitResolve() {
-  if (!selected.value) return
+  if (!selected.value || resolving.value) return
   const reason = resolveForm.reason.trim()
   if (!reason) {
-    ElMessage.warning('请填写处理结论')
+    resolveError.value = '请填写处理结论'
+    await nextTick()
+    document.getElementById('report-resolution')?.focus()
     return
   }
   resolving.value = true
@@ -148,7 +160,11 @@ onMounted(load)
     <div class="head">
       <h1>举报处理</h1>
       <div class="tools">
-        <el-radio-group :model-value="status" @change="switchStatus($event as ReportStatus)">
+        <el-radio-group
+          :model-value="status"
+          aria-label="举报处理状态"
+          @change="switchStatus($event as ReportStatus)"
+        >
           <el-radio-button value="PENDING">待处理</el-radio-button>
           <el-radio-button value="RESOLVED">已处理</el-radio-button>
         </el-radio-group>
@@ -156,15 +172,30 @@ onMounted(load)
       </div>
     </div>
 
+    <ResultSummary
+      name="举报记录"
+      :loading="loading"
+      :failed="!!errorText"
+      :total="total"
+      :page="page"
+    />
     <el-alert v-if="errorText" :title="errorText" type="warning" :closable="false" show-icon />
 
-    <el-skeleton v-else-if="loading" :rows="5" animated />
+    <el-skeleton v-else-if="loading" :rows="5" animated aria-hidden="true" />
 
     <el-empty v-else-if="rows.length === 0" description="当前没有举报记录" />
 
     <template v-else>
       <p v-if="narrow" class="hint">表格可左右滑动，查看完整信息与操作。</p>
-      <el-table :data="rows" border style="width: 100%">
+      <el-table
+        table-layout="auto"
+        :scrollbar-tabindex="0"
+        role="region"
+        aria-label="举报处理列表"
+        :data="rows"
+        border
+        style="width: 100%"
+      >
         <el-table-column prop="id" label="编号" width="80" />
         <el-table-column prop="itemId" label="物品" width="80" />
         <el-table-column label="关联会话" width="110">
@@ -174,7 +205,7 @@ onMounted(load)
             <span v-else>无</span>
           </template>
         </el-table-column>
-        <el-table-column prop="reason" label="举报理由" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="reason" label="举报理由" min-width="200" />
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
             <el-tag :type="row.status === 'RESOLVED' ? 'success' : 'warning'">
@@ -207,6 +238,8 @@ onMounted(load)
       </el-table>
 
       <el-pagination
+        role="navigation"
+        aria-label="举报处理列表分页"
         class="pager"
         layout="prev, pager, next, total"
         :current-page="page"
@@ -224,7 +257,8 @@ onMounted(load)
       size="min(480px, calc(100vw - 16px))"
       class="report-drawer"
     >
-      <el-skeleton v-if="selectedLoading" :rows="6" animated />
+      <p class="visually-hidden" role="status">{{ selectedLoading ? '正在加载举报详情' : '' }}</p>
+      <el-skeleton v-if="selectedLoading" :rows="6" animated aria-hidden="true" />
       <el-descriptions v-else-if="selected" :column="1" border>
         <el-descriptions-item label="举报编号">{{ selected.id }}</el-descriptions-item>
         <el-descriptions-item label="物品编号">{{ selected.itemId }}</el-descriptions-item>
@@ -265,7 +299,12 @@ onMounted(load)
         :closable="false"
         show-icon
       />
-      <el-skeleton v-else-if="conversationLoading" :rows="5" animated />
+      <el-skeleton
+        v-else-if="conversationLoading && !conversation"
+        :rows="5"
+        animated
+        aria-hidden="true"
+      />
       <template v-else-if="conversation">
         <el-descriptions :column="narrow ? 1 : 2" border class="conversation-meta">
           <el-descriptions-item label="类型">
@@ -290,6 +329,8 @@ onMounted(load)
           </li>
         </ul>
         <el-pagination
+          role="navigation"
+          aria-label="举报会话留言分页"
           v-model:current-page="conversationPage"
           :total="conversation.total"
           :page-size="10"
@@ -299,13 +340,28 @@ onMounted(load)
           @current-change="loadConversation"
         />
       </template>
+      <p class="visually-hidden" role="status">
+        <template v-if="conversationLoading">正在加载留言</template>
+        <template v-else-if="conversation && !conversationError">
+          {{
+            conversation.total
+              ? `共 ${conversation.total} 条留言，当前第 ${conversationPage} 页`
+              : '暂无留言'
+          }}
+        </template>
+      </p>
       <template #footer>
         <el-button @click="conversationVisible = false">关闭</el-button>
       </template>
     </el-dialog>
 
     <!-- 处理举报 -->
-    <el-dialog v-model="resolveVisible" title="处理举报" width="min(520px, calc(100vw - 32px))">
+    <el-dialog
+      v-model="resolveVisible"
+      title="处理举报"
+      width="min(520px, calc(100vw - 32px))"
+      @closed="restoreFocus(resolveOpener)"
+    >
       <el-form
         :label-width="narrow ? undefined : '100px'"
         :label-position="narrow ? 'top' : 'right'"
@@ -324,13 +380,21 @@ onMounted(load)
         </el-form-item>
         <el-form-item label="处理结论">
           <el-input
+            id="report-resolution"
             v-model="resolveForm.reason"
             type="textarea"
             :rows="4"
             maxlength="500"
             show-word-limit
+            aria-required="true"
+            :aria-invalid="!!resolveError || undefined"
+            :aria-describedby="resolveError ? 'report-resolution-error' : undefined"
             placeholder="必填，1~500 字；业务处置与举报结论同一事务提交"
+            @input="resolveError = ''"
           />
+          <p v-if="resolveError" id="report-resolution-error" class="resolution-error" role="alert">
+            {{ resolveError }}
+          </p>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -342,6 +406,11 @@ onMounted(load)
 </template>
 
 <style scoped>
+.resolution-error {
+  margin: 0;
+  color: var(--el-color-error);
+}
+
 .head {
   display: flex;
   align-items: center;

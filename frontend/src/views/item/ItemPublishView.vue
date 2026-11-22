@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 
@@ -40,6 +40,8 @@ const submitting = ref(false)
 const publishedId = ref('')
 const publishedStatus = ref<ItemStatus>('PENDING_REVIEW')
 const errorMessage = ref('')
+const invalidField = ref('')
+const publishResult = ref<HTMLElement>()
 let attempt: { body: string; key: string } | undefined
 
 watch(
@@ -53,6 +55,7 @@ watch(
     pictures.value = []
     publishedId.value = ''
     errorMessage.value = ''
+    invalidField.value = ''
     loadFailed.value = false
     loading.value = false
     attempt = undefined
@@ -91,17 +94,18 @@ async function submit() {
   if (submitting.value || uploading.value || loading.value || loadFailed.value || publishedId.value)
     return
   errorMessage.value = ''
+  invalidField.value = ''
 
   if (textLength(form.title) < 1 || textLength(form.title) > 50) {
-    errorMessage.value = '标题需填写 1～50 字'
+    await showFieldError('item-title', '标题需填写 1～50 字')
     return
   }
   if (textLength(form.location) < 1 || textLength(form.location) > 50) {
-    errorMessage.value = '地点需填写 1～50 字'
+    await showFieldError('item-location', '地点需填写 1～50 字')
     return
   }
   if (textLength(form.description) < 10 || textLength(form.description) > 500) {
-    errorMessage.value = '描述需填写 10～500 字'
+    await showFieldError('item-description', '描述需填写 10～500 字')
     return
   }
 
@@ -126,9 +130,12 @@ async function submit() {
       : await createItem(payload, attempt.key)
     publishedId.value = item.id
     publishedStatus.value = item.status
-    void ElMessageBox.alert('已提交，等待审核', '提交成功', { confirmButtonText: '知道了' }).catch(
-      () => {},
-    )
+    await ElMessageBox.alert(
+      item.status === 'PENDING_REVIEW' ? '已提交，等待审核' : '已提交',
+      '提交成功',
+      { confirmButtonText: '知道了' },
+    ).catch(() => {})
+    publishResult.value?.focus()
   } catch (error) {
     errorMessage.value = describeError(error)
   } finally {
@@ -136,11 +143,26 @@ async function submit() {
   }
 }
 
-function startNewItem() {
+async function showFieldError(field: string, message: string) {
+  invalidField.value = field
+  errorMessage.value = message
+  await nextTick()
+  document.getElementById(field)?.focus()
+}
+
+function clearFieldError(field: string) {
+  if (invalidField.value !== field) return
+  invalidField.value = ''
+  errorMessage.value = ''
+}
+
+async function startNewItem() {
   Object.assign(form, initialForm)
   attempt = undefined
   pictures.value = []
   publishedId.value = ''
+  await nextTick()
+  document.getElementById('item-type')?.focus()
 }
 </script>
 
@@ -149,23 +171,21 @@ function startNewItem() {
     <h1>{{ editing ? '修改物品信息' : '发布物品信息' }}</h1>
     <p v-if="loading" role="status">正在加载原信息…</p>
     <el-alert v-if="loadFailed" :title="errorMessage" type="error" :closable="false" />
-    <el-alert
-      v-if="publishedId"
-      :title="publishedStatus === 'PENDING_REVIEW' ? '已提交，等待审核' : '已提交'"
-      type="success"
-      :closable="false"
-    >
+    <section v-if="publishedId" aria-labelledby="publish-result">
+      <h2 id="publish-result" ref="publishResult" tabindex="-1">
+        {{ publishedStatus === 'PENDING_REVIEW' ? '已提交，等待审核' : '已提交' }}
+      </h2>
       <p>物品编号 {{ publishedId }}。当前状态为{{ ITEM_STATUS_LABELS[publishedStatus] }}。</p>
-      <el-button type="primary" disabled>已提交</el-button>
       <RouterLink :to="{ name: 'my-items' }">查看我的发布</RouterLink>
       <el-button v-if="!editing" @click="startNewItem">发布另一条</el-button>
-    </el-alert>
+    </section>
     <form v-else-if="!loading && !loadFailed" @submit.prevent="submit">
       <fieldset :disabled="submitting || uploading">
         <p>以下各项均为必填。公开内容请勿填写手机号、邮箱或社交账号。</p>
         <label>
           信息类型
           <el-select
+            id="item-type"
             v-model="form.type"
             aria-label="信息类型"
             :disabled="editing || submitting || uploading"
@@ -190,16 +210,45 @@ function startNewItem() {
           </el-select>
         </label>
         <label for="item-title">标题（1～50 字）</label>
-        <el-input id="item-title" v-model="form.title" />
+        <el-input
+          id="item-title"
+          v-model="form.title"
+          aria-required="true"
+          :aria-invalid="invalidField === 'item-title' || undefined"
+          :aria-describedby="invalidField === 'item-title' ? 'publish-error' : undefined"
+          @input="clearFieldError('item-title')"
+        />
         <label for="item-location">发生地点（1～50 字）</label>
-        <el-input id="item-location" v-model="form.location" />
+        <el-input
+          id="item-location"
+          v-model="form.location"
+          aria-required="true"
+          :aria-invalid="invalidField === 'item-location' || undefined"
+          :aria-describedby="invalidField === 'item-location' ? 'publish-error' : undefined"
+          @input="clearFieldError('item-location')"
+        />
         <label for="item-date">发生日期</label>
         <input id="item-date" v-model="form.occurredDate" type="date" required />
         <label for="item-description">物品描述（10～500 字）</label>
-        <el-input id="item-description" v-model="form.description" type="textarea" :rows="5" />
+        <el-input
+          id="item-description"
+          v-model="form.description"
+          type="textarea"
+          :rows="5"
+          aria-required="true"
+          :aria-invalid="invalidField === 'item-description' || undefined"
+          :aria-describedby="invalidField === 'item-description' ? 'publish-error' : undefined"
+          @input="clearFieldError('item-description')"
+        />
         <ItemImagePicker v-model="pictures" :disabled="submitting" @busy="uploading = $event" />
       </fieldset>
-      <el-alert v-if="errorMessage" :title="errorMessage" type="error" :closable="false" />
+      <el-alert
+        v-if="errorMessage"
+        id="publish-error"
+        :title="errorMessage"
+        type="error"
+        :closable="false"
+      />
       <el-button
         native-type="submit"
         type="primary"

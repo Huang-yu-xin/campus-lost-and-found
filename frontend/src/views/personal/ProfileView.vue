@@ -4,6 +4,9 @@ import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 
 import { describeError } from '@/api/feedback'
+import AccessibleFormItem from '@/components/AccessibleFormItem.vue'
+import PasswordInput from '@/components/PasswordInput.vue'
+import { validateForm } from '@/utils/validateForm'
 import { ApiError, http } from '@/api/http'
 import { changeEmail, changePassword, sendChangeEmailCode, updateProfile } from '@/api/me'
 import { useAuthStore } from '@/stores/auth'
@@ -63,7 +66,7 @@ const profileRules: FormRules<typeof profileForm> = {
 }
 
 async function saveProfile() {
-  if (profileSaving.value || !(await profileFormRef.value?.validate().catch(() => false))) {
+  if (profileSaving.value || !(await validateForm(profileFormRef.value))) {
     return
   }
   const nickname = profileForm.nickname.trim()
@@ -153,7 +156,7 @@ async function sendEmailCode() {
 }
 
 async function saveEmail() {
-  if (emailSaving.value || !(await emailFormRef.value?.validate().catch(() => false))) {
+  if (emailSaving.value || !(await validateForm(emailFormRef.value))) {
     return
   }
   emailSaving.value = true
@@ -204,7 +207,7 @@ const passwordRules: FormRules<typeof passwordForm> = {
 }
 
 async function savePassword() {
-  if (passwordSaving.value || !(await passwordFormRef.value?.validate().catch(() => false))) {
+  if (passwordSaving.value || !(await validateForm(passwordFormRef.value))) {
     return
   }
   passwordSaving.value = true
@@ -265,12 +268,17 @@ onBeforeUnmount(() => clearInterval(timer))
         label-position="top"
         @submit.prevent="saveProfile"
       >
-        <el-form-item label="昵称（公开显示）" prop="nickname">
-          <el-input v-model="profileForm.nickname" />
-        </el-form-item>
-        <el-form-item label="手机号（选填，不公开）" prop="phone">
-          <el-input v-model="profileForm.phone" maxlength="20" placeholder="不填则清空" />
-        </el-form-item>
+        <AccessibleFormItem label="昵称（公开显示）" prop="nickname" v-slot="{ control }">
+          <el-input v-bind="control" aria-required="true" v-model="profileForm.nickname" />
+        </AccessibleFormItem>
+        <AccessibleFormItem label="手机号（选填，不公开）" prop="phone" v-slot="{ control }">
+          <el-input
+            v-bind="control"
+            v-model="profileForm.phone"
+            maxlength="20"
+            placeholder="不填则清空"
+          />
+        </AccessibleFormItem>
         <p class="hint">
           修改手机号后，之前授权给认领对方查看的手机号会自动撤回，需要时请重新授权。
         </p>
@@ -295,17 +303,29 @@ onBeforeUnmount(() => clearInterval(timer))
         label-position="top"
         @submit.prevent="saveEmail"
       >
-        <el-form-item label="新邮箱" prop="email">
-          <el-input v-model="emailForm.email" maxlength="254" autocomplete="email" />
-        </el-form-item>
-        <el-form-item label="验证码" prop="emailCode">
+        <AccessibleFormItem label="新邮箱" prop="email" v-slot="{ control }">
+          <el-input
+            v-bind="control"
+            aria-required="true"
+            v-model="emailForm.email"
+            maxlength="254"
+            autocomplete="email"
+          />
+        </AccessibleFormItem>
+        <AccessibleFormItem label="验证码" prop="emailCode" v-slot="{ control }">
           <div class="code-row">
-            <el-input v-model="emailForm.emailCode" maxlength="6" inputmode="numeric" />
+            <el-input
+              v-bind="control"
+              aria-required="true"
+              v-model="emailForm.emailCode"
+              maxlength="6"
+              inputmode="numeric"
+            />
             <el-button :loading="emailSending" :disabled="countdown > 0" @click="sendEmailCode">
               {{ countdown > 0 ? `${countdown} 秒后重发` : '获取验证码' }}
             </el-button>
           </div>
-        </el-form-item>
+        </AccessibleFormItem>
         <p class="hint">
           验证码发到新邮箱（演示环境为模拟发送，见
           runtime/dev-mail）。修改后，之前授权的邮箱会自动撤回。
@@ -331,33 +351,36 @@ onBeforeUnmount(() => clearInterval(timer))
         label-position="top"
         @submit.prevent="savePassword"
       >
-        <el-form-item label="原密码" prop="oldPassword">
-          <el-input
+        <AccessibleFormItem label="原密码" prop="oldPassword" v-slot="{ control }">
+          <PasswordInput
+            v-bind="control"
+            aria-required="true"
+            toggle-label="显示原密码"
             v-model="passwordForm.oldPassword"
-            type="password"
-            show-password
             maxlength="64"
             autocomplete="current-password"
           />
-        </el-form-item>
-        <el-form-item label="新密码" prop="newPassword">
-          <el-input
+        </AccessibleFormItem>
+        <AccessibleFormItem label="新密码" prop="newPassword" v-slot="{ control }">
+          <PasswordInput
+            v-bind="control"
+            aria-required="true"
+            toggle-label="显示新密码"
             v-model="passwordForm.newPassword"
-            type="password"
-            show-password
             maxlength="64"
             autocomplete="new-password"
           />
-        </el-form-item>
-        <el-form-item label="确认新密码" prop="confirmPassword">
-          <el-input
+        </AccessibleFormItem>
+        <AccessibleFormItem label="确认新密码" prop="confirmPassword" v-slot="{ control }">
+          <PasswordInput
+            v-bind="control"
+            aria-required="true"
+            toggle-label="显示确认密码"
             v-model="passwordForm.confirmPassword"
-            type="password"
-            show-password
             maxlength="64"
             autocomplete="new-password"
           />
-        </el-form-item>
+        </AccessibleFormItem>
         <p class="hint">修改成功后，所有设备上的登录都会失效，需要用新密码重新登录。</p>
         <el-button type="primary" native-type="submit" :loading="passwordSaving">
           修改密码

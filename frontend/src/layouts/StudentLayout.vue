@@ -12,8 +12,10 @@ const route = useRoute()
 const compact = useMediaQuery('(max-width: 640px)')
 const menuOpen = ref(false)
 const menuButton = ref<HTMLButtonElement>()
+const navigation = ref<HTMLElement>()
 
 function closeMenu(restoreFocus = false) {
+  if (!menuOpen.value) return
   menuOpen.value = false
   if (restoreFocus) menuButton.value?.focus()
 }
@@ -22,7 +24,15 @@ watch(
   () => route.fullPath,
   () => closeMenu(),
 )
-watch(compact, () => closeMenu())
+watch(compact, (isCompact) => {
+  const focused = document.activeElement
+  closeMenu()
+  if (isCompact && navigation.value?.contains(focused)) {
+    menuButton.value?.focus()
+  } else if (!isCompact && focused === menuButton.value) {
+    navigation.value?.querySelector('a')?.focus()
+  }
+})
 
 async function logout() {
   try {
@@ -37,7 +47,7 @@ async function logout() {
 <template>
   <div class="student-layout">
     <header class="site-header">
-      <div class="container header-inner" @keydown.esc.stop="closeMenu(true)">
+      <div class="container header-inner" @keydown.esc="closeMenu(true)">
         <RouterLink to="/" class="brand">校园失物招领</RouterLink>
         <button
           ref="menuButton"
@@ -51,10 +61,10 @@ async function logout() {
         </button>
         <nav
           id="student-navigation"
+          ref="navigation"
           class="nav"
           :class="{ 'is-open': menuOpen }"
           aria-label="学生端导航"
-          @click="closeMenu()"
         >
           <RouterLink to="/">首页</RouterLink>
           <RouterLink :to="{ name: 'items' }">浏览物品</RouterLink>
@@ -77,13 +87,22 @@ async function logout() {
             <RouterLink v-if="auth.isAdmin" to="/admin">管理后台</RouterLink>
             <el-button link @click="logout">退出</el-button>
           </template>
-          <RouterLink v-else :to="{ name: 'login' }">
-            <el-button type="primary" size="small">登录</el-button>
+          <RouterLink
+            v-else
+            :to="{ name: 'login' }"
+            class="el-button el-button--primary el-button--small"
+          >
+            登录
           </RouterLink>
         </div>
       </div>
     </header>
-    <main class="container page">
+    <main
+      id="main-content"
+      class="container page"
+      tabindex="-1"
+      :aria-label="typeof route.meta.title === 'string' ? route.meta.title : undefined"
+    >
       <RouterView />
     </main>
   </div>
@@ -191,7 +210,6 @@ async function logout() {
   }
 
   .user-area {
-    grid-row: 2;
     grid-column: 1 / -1;
     max-width: none;
   }

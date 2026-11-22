@@ -32,7 +32,12 @@ async function logout() {
         <el-button link @click="logout">退出</el-button>
       </div>
     </aside>
-    <main class="content">
+    <main
+      id="main-content"
+      class="content"
+      tabindex="-1"
+      :aria-label="typeof $route.meta.title === 'string' ? $route.meta.title : undefined"
+    >
       <RouterView />
     </main>
   </div>
@@ -114,7 +119,6 @@ async function logout() {
   .menu {
     flex-direction: row;
     flex-basis: 100%;
-    order: 3;
     flex-wrap: wrap;
   }
 

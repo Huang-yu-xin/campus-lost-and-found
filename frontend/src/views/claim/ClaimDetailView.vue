@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 import { describeError } from '@/api/feedback'
+import { askForText } from '@/composables/useTextPrompt'
 import {
   completeClaim,
   confirmClaim,
@@ -21,6 +22,7 @@ import { useAuthStore } from '@/stores/auth'
 import { ITEM_STATUS_LABELS } from '@/types/domain'
 import { formatTime } from '@/utils/time'
 import { useMediaQuery } from '@/composables/useMediaQuery'
+import { restoreFocus } from '@/utils/restoreFocus'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -72,6 +74,7 @@ const messageText = ref('')
 const sending = ref(false)
 const loadingMessages = ref(false)
 const messageError = ref('')
+const messageSent = ref(false)
 
 const permission = ref<ContactPermission | null>(null)
 const permissionForm = ref({ phoneVisible: false, emailVisible: false })
@@ -97,6 +100,8 @@ async function load() {
 }
 
 async function loadMessages() {
+  const previous = document.activeElement
+  messageSent.value = false
   loadingMessages.value = true
   messageError.value = ''
   try {
@@ -107,12 +112,14 @@ async function loadMessages() {
     messageError.value = describeError(error)
   } finally {
     loadingMessages.value = false
+    await restoreFocus(previous)
   }
 }
 
 async function submitMessage() {
   const text = messageText.value.trim()
   if (!text || sending.value) return
+  const previous = document.activeElement
   sending.value = true
   try {
     await sendMessage(claimId, text)
@@ -120,10 +127,12 @@ async function submitMessage() {
     const latest = await listMessages(claimId, 1, 10)
     messagePage.value = Math.max(1, Math.ceil(latest.total / 10))
     await loadMessages()
+    messageSent.value = true
   } catch (error) {
     ElMessage.error(describeError(error))
   } finally {
     sending.value = false
+    await restoreFocus(previous === document.body ? null : document.getElementById('claim-message'))
   }
 }
 
@@ -176,28 +185,31 @@ async function revealCounterparty() {
 
 async function act(action: 'confirm' | 'reject' | 'complete') {
   if (acting.value || !detail.value) return
-  acting.value = true
+  const previous = document.activeElement
   try {
     if (action === 'confirm') {
       await ElMessageBox.confirm(
         '确认后该信息下的其他认领申请将不可再被确认，确定吗？',
         '确认认领',
-        { type: 'warning' },
+        { type: 'warning', autofocus: false },
       )
+      acting.value = true
       await confirmClaim(claimId, detail.value.claim.version)
       ElMessage.success('已确认认领')
     } else if (action === 'reject') {
-      const { value } = await ElMessageBox.prompt('请填写驳回原因（申请人可见）', '驳回认领', {
+      const { value } = await askForText('请填写驳回原因（申请人可见）', '驳回认领', {
         inputValidator: (v: string) => (v && v.trim().length > 0 ? true : '驳回原因必填'),
       })
+      acting.value = true
       await rejectClaim(claimId, detail.value.claim.version, value.trim())
       ElMessage.success('已驳回')
     } else {
       await ElMessageBox.confirm(
         '确认已完成线下交接？确认后申请变为「已完成」，物品归档并从列表消失，双方联系方式授权同时失效。',
         '确认交接完成',
-        { type: 'warning' },
+        { type: 'warning', autofocus: false },
       )
+      acting.value = true
       await completeClaim(claimId, detail.value.claim.version)
       ElMessage.success('交接完成，物品已归档')
     }
@@ -207,13 +219,14 @@ async function act(action: 'confirm' | 'reject' | 'complete') {
     if (error !== 'cancel') ElMessage.error(describeError(error))
   } finally {
     acting.value = false
+    await restoreFocus(previous)
   }
 }
 
 async function reportConversation() {
   if (!detail.value) return
   try {
-    const { value } = await ElMessageBox.prompt(
+    const { value } = await askForText(
       '请说明举报理由（仅举报人与管理员可见，最长 500 字）',
       '举报该认领会话',
       {
@@ -249,7 +262,7 @@ onMounted(load)
       <el-card shadow="never" class="block">
         <template #header>
           <div class="card-head">
-            <span>申请状态</span>
+            <h2>申请状态</h2>
             <el-tag :type="detail.claim.status === 'CONFIRMED' ? 'success' : 'info'">
               {{ statusText[detail.claim.status] ?? detail.claim.status }}
             </el-tag>
@@ -287,12 +300,24 @@ onMounted(load)
       <el-card v-if="isParticipant" shadow="never" class="block">
         <template #header>
           <div class="card-head">
-            <span>会话留言</span>
+            <h2>会话留言</h2>
             <el-tag v-if="canChat" type="success" size="small">可发送</el-tag>
             <el-tag v-else type="info" size="small">已只读</el-tag>
           </div>
         </template>
 
+        <p class="visually-hidden" role="status">
+          <template v-if="loadingMessages">正在加载留言</template>
+          <template v-else-if="!messageError">
+            {{
+              messageSent
+                ? '留言已发送'
+                : messageTotal
+                  ? `共 ${messageTotal} 条留言，当前第 ${messagePage} 页`
+                  : '暂无留言'
+            }}
+          </template>
+        </p>
         <el-alert
           v-if="messageError"
           :title="messageError"
@@ -316,6 +341,8 @@ onMounted(load)
           </li>
         </ul>
         <el-pagination
+          role="navigation"
+          aria-label="认领会话留言分页"
           v-if="messageTotal > 0"
           v-model:current-page="messagePage"
           :total="messageTotal"
@@ -327,7 +354,9 @@ onMounted(load)
         />
 
         <div class="message-editor">
+          <label for="claim-message">填写留言</label>
           <el-input
+            id="claim-message"
             v-model="messageText"
             type="textarea"
             :rows="3"
@@ -335,9 +364,12 @@ onMounted(load)
             show-word-limit
             :disabled="!canChat"
             placeholder="纯文本留言，1~1000 字；不要写手机号或邮箱，请在下方授权查看"
+            aria-describedby="claim-message-hint"
           />
           <div class="editor-foot">
-            <span class="hint">申请提交后即可留言；交接完成或申请关闭后只保留历史。</span>
+            <span id="claim-message-hint" class="hint"
+              >申请提交后即可留言；交接完成或申请关闭后只保留历史。请使用下方授权功能分享联系方式。</span
+            >
             <el-button
               type="primary"
               :loading="sending"
@@ -354,7 +386,7 @@ onMounted(load)
       <el-card v-if="isParticipant" shadow="never" class="block">
         <template #header>
           <div class="card-head">
-            <span>联系方式授权</span>
+            <h2>联系方式授权</h2>
             <el-tag :type="contactEffective ? 'success' : 'info'" size="small">
               {{ contactEffective ? '授权中' : '未生效' }}
             </el-tag>

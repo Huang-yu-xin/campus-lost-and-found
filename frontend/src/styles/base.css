@@ -5,8 +5,20 @@
   --app-surface: #ffffff;
   --app-border: #e4e7ed;
   --app-text: #303133;
-  --app-text-secondary: #909399;
+  --app-text-secondary: #595e66;
   --app-content-width: 1120px;
+  --app-focus: #1558a4;
+  --app-control-border: #767d87;
+  --el-color-primary: #185da8;
+  --el-color-primary-dark-2: #104682;
+  --el-color-primary-light-3: #2469b0;
+  --el-color-success: #267243;
+  --el-color-warning: #80530e;
+  --el-color-danger: #a72a32;
+  --el-color-error: #a72a32;
+  --el-color-info: #505763;
+  --el-text-color-secondary: var(--app-text-secondary);
+  --el-text-color-placeholder: var(--app-text-secondary);
 }
 
 *,
@@ -30,9 +42,109 @@ a {
   text-decoration: none;
 }
 
-:focus-visible {
-  outline: 2px solid var(--el-color-primary, #409eff);
-  outline-offset: 3px;
+.visually-hidden,
+.skip-link:not(:focus) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip-link:focus {
+  position: fixed;
+  z-index: 3000;
+  top: 8px;
+  left: 8px;
+  padding: 8px 12px;
+  border: 1px solid currentColor;
+  background: var(--app-surface);
+  text-decoration: underline;
+}
+
+:focus-visible,
+.el-button:not(.is-disabled):focus-visible,
+.el-dialog__headerbtn:focus-visible,
+.el-drawer__close-btn:focus-visible,
+.el-message-box__headerbtn:focus-visible {
+  outline: 2px solid var(--app-focus);
+  outline-offset: 2px;
+}
+
+.el-input__wrapper:has(input:focus-visible),
+.el-select__wrapper:has(input:focus-visible),
+.el-radio-button:has(input:focus-visible) .el-radio-button__inner,
+.el-checkbox:has(input:focus-visible) .el-checkbox__inner,
+.el-pagination .el-pager li:focus-visible,
+.el-table .el-scrollbar__wrap:focus-visible {
+  outline: 2px solid var(--app-focus);
+  outline-offset: -2px;
+}
+
+.el-input,
+.el-textarea,
+.el-select,
+.el-radio-button {
+  --el-border-color: var(--app-control-border);
+}
+
+main a:not(.el-button),
+nav a[aria-current='page'] {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.el-table .cell {
+  overflow-wrap: anywhere;
+}
+
+@media (forced-colors: active) {
+  :root {
+    --app-focus: Highlight;
+    --app-control-border: ButtonText;
+  }
+
+  nav a[aria-current='page'],
+  .el-pagination .el-pager li.is-active,
+  .el-radio-button.is-active .el-radio-button__inner {
+    border: 2px solid Highlight;
+    text-decoration: underline;
+  }
+
+  .el-button,
+  .el-input__wrapper,
+  .el-select__wrapper,
+  .el-textarea__inner,
+  .el-message,
+  .el-alert,
+  .el-tag,
+  .el-dialog,
+  .el-drawer,
+  .el-message-box {
+    outline: 1px solid ButtonText;
+    outline-offset: -1px;
+  }
+
+  .el-button:disabled,
+  .el-tag,
+  .el-pagination button:disabled {
+    border-color: GrayText;
+  }
+
+  .el-button:not(.is-disabled):focus-visible,
+  .el-input__wrapper:has(input:focus-visible),
+  .el-select__wrapper:has(input:focus-visible),
+  .el-textarea__inner:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  .el-checkbox__input.is-checked .el-checkbox__inner::after {
+    border-color: Highlight;
+  }
 }
 
 main,

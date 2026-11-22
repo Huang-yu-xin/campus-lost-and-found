@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 
 import {
   approveItem,
@@ -14,6 +14,9 @@ import {
   type ReviewRecord,
 } from '@/api/admin'
 import { describeError } from '@/api/feedback'
+import { restoreFocus } from '@/utils/restoreFocus'
+import ResultSummary from '@/components/ResultSummary.vue'
+import { askForText } from '@/composables/useTextPrompt'
 import type { ItemRecord } from '@/api/items'
 import { formatTime } from '@/utils/time'
 import { useMediaQuery } from '@/composables/useMediaQuery'
@@ -46,6 +49,7 @@ const actionText: Record<string, string> = { APPROVE: '通过', RETURN: '退回'
 async function load() {
   loading.value = true
   errorText.value = ''
+  const previous = document.activeElement
   try {
     const result = await listAdminItems(status.value, page.value, PAGE_SIZE)
     // 处理完末页最后一条后退回上一页，避免停在空页
@@ -59,6 +63,7 @@ async function load() {
     errorText.value = describeError(error)
   } finally {
     loading.value = false
+    await restoreFocus(previous)
   }
 }
 
@@ -70,6 +75,7 @@ function switchStatus() {
 async function approve(rawRow: unknown) {
   const row = rawRow as ItemRecord
   actingId.value = row.id
+  const previous = document.activeElement
   try {
     await approveItem(row.id, row.version)
     ElMessage.success('已通过，信息进入公共列表')
@@ -78,16 +84,19 @@ async function approve(rawRow: unknown) {
     ElMessage.error(describeError(error))
   } finally {
     actingId.value = null
+    await restoreFocus(previous)
   }
 }
 
 async function returnItem(rawRow: unknown) {
   const row = rawRow as ItemRecord
-  actingId.value = row.id
+  if (actingId.value) return
+  const previous = document.activeElement
   try {
-    const { value } = await ElMessageBox.prompt('请填写退回原因（发布者可见，必填）', '退回修改', {
+    const { value } = await askForText('请填写退回原因（发布者可见，必填）', '退回修改', {
       inputValidator: (v: string) => (v && v.trim().length > 0 ? true : '退回原因必填'),
     })
+    actingId.value = row.id
     await returnAdminItem(row.id, row.version, value.trim())
     ElMessage.success('已退回，发布者可修改后重新提交')
     await load()
@@ -95,6 +104,7 @@ async function returnItem(rawRow: unknown) {
     if (error !== 'cancel') ElMessage.error(describeError(error))
   } finally {
     actingId.value = null
+    await restoreFocus(previous)
   }
 }
 
@@ -135,16 +145,13 @@ onMounted(load)
 async function takeDown(rawRow: unknown) {
   const row = rawRow as ItemRecord
   if (actingId.value) return
-  actingId.value = row.id
+  const previous = document.activeElement
   try {
-    const { value } = await ElMessageBox.prompt(
-      '请填写下架原因（1～500 字，发布者可见）',
-      '下架信息',
-      {
-        inputValidator: (v: string) =>
-          (!!v?.trim() && v.trim().length <= 500) || '请填写 1～500 字的原因',
-      },
-    )
+    const { value } = await askForText('请填写下架原因（1～500 字，发布者可见）', '下架信息', {
+      inputValidator: (v: string) =>
+        (!!v?.trim() && v.trim().length <= 500) || '请填写 1～500 字的原因',
+    })
+    actingId.value = row.id
     await takeDownItem(row.id, row.version, value.trim())
     ElMessage.success('已下架，相关会话停止新增留言')
     await load()
@@ -152,6 +159,7 @@ async function takeDown(rawRow: unknown) {
     if (e !== 'cancel' && e !== 'close') ElMessage.error(describeError(e))
   } finally {
     actingId.value = null
+    await restoreFocus(previous)
   }
 }
 </script>
@@ -160,24 +168,38 @@ async function takeDown(rawRow: unknown) {
   <section class="admin-items">
     <div class="head">
       <h1>信息管理</h1>
-      <el-radio-group v-model="status" @change="switchStatus">
+      <el-radio-group v-model="status" aria-label="物品审核状态" @change="switchStatus">
         <el-radio-button value="PENDING_REVIEW">待审核</el-radio-button>
         <el-radio-button value="RETURNED">已退回</el-radio-button>
         <el-radio-button value="PUBLISHED">已发布</el-radio-button>
       </el-radio-group>
     </div>
 
+    <ResultSummary
+      name="物品审核记录"
+      :loading="loading"
+      :failed="!!errorText"
+      :total="total"
+      :page="page"
+    />
     <el-alert v-if="errorText" :title="errorText" type="warning" :closable="false" show-icon>
       <p class="hint">请使用管理员账号登录后再访问。</p>
     </el-alert>
 
-    <el-skeleton v-else-if="loading" :rows="5" animated />
+    <el-skeleton v-else-if="loading" :rows="5" animated aria-hidden="true" />
 
     <el-empty v-else-if="rows.length === 0" description="这个状态下没有待处理的信息" />
 
     <template v-else>
       <p v-if="narrow" class="hint">表格可左右滑动，查看完整信息与操作。</p>
-      <el-table :data="rows" border>
+      <el-table
+        table-layout="auto"
+        :scrollbar-tabindex="0"
+        role="region"
+        aria-label="物品审核列表"
+        :data="rows"
+        border
+      >
         <el-table-column prop="title" label="标题" min-width="180" />
         <el-table-column label="类型" width="90">
           <template #default="{ row }">{{ typeText[row.type] ?? row.type }}</template>
@@ -218,6 +240,8 @@ async function takeDown(rawRow: unknown) {
       </el-table>
     </template>
     <el-pagination
+      role="navigation"
+      aria-label="物品审核列表分页"
       v-if="total > PAGE_SIZE"
       v-model:current-page="page"
       class="pager"
@@ -238,10 +262,10 @@ async function takeDown(rawRow: unknown) {
         <p class="description">{{ selectedItem.description }}</p>
         <div class="images">
           <img
-            v-for="image in selectedItem.images"
+            v-for="(image, index) in selectedItem.images"
             :key="image.id"
             :src="image.url"
-            alt="待审核物品图片"
+            :alt="`${selectedItem.title}，图片 ${index + 1}`"
           />
         </div>
         <h3>审核记录</h3>
@@ -251,6 +275,8 @@ async function takeDown(rawRow: unknown) {
           }}<span v-if="record.reason">：{{ record.reason }}</span>
         </p>
         <el-pagination
+          role="navigation"
+          aria-label="审核记录分页"
           v-if="recordTotal > PAGE_SIZE"
           v-model:current-page="recordPage"
           small

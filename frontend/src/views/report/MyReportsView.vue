@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 
 import { describeError } from '@/api/feedback'
+import ResultSummary from '@/components/ResultSummary.vue'
 import { listMyReports } from '@/api/reports'
 import type { Report } from '@/api/reports'
 import { formatTime } from '@/utils/time'
@@ -53,9 +54,16 @@ onMounted(load)
       <el-button @click="load">刷新</el-button>
     </div>
 
+    <ResultSummary
+      name="举报记录"
+      :loading="loading"
+      :failed="!!errorText"
+      :total="total"
+      :page="page"
+    />
     <el-alert v-if="errorText" :title="errorText" type="warning" :closable="false" show-icon />
 
-    <el-skeleton v-else-if="loading" :rows="5" animated />
+    <el-skeleton v-else-if="loading" :rows="5" animated aria-hidden="true" />
 
     <el-empty v-else-if="rows.length === 0" description="还没有提交过举报" />
 
@@ -96,7 +104,16 @@ onMounted(load)
           </dl>
         </article>
       </div>
-      <el-table class="desktop-records" :data="rows" border style="width: 100%">
+      <el-table
+        table-layout="auto"
+        :scrollbar-tabindex="0"
+        role="region"
+        aria-label="举报记录"
+        class="desktop-records"
+        :data="rows"
+        border
+        style="width: 100%"
+      >
         <el-table-column prop="id" label="举报编号" width="100" />
         <el-table-column prop="itemId" label="物品" width="90" />
         <el-table-column label="关联会话" width="120">
@@ -106,7 +123,7 @@ onMounted(load)
             <span v-else>公开物品</span>
           </template>
         </el-table-column>
-        <el-table-column prop="reason" label="举报理由" min-width="220" show-overflow-tooltip />
+        <el-table-column prop="reason" label="举报理由" min-width="220" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="row.status === 'RESOLVED' ? 'success' : 'warning'">
@@ -128,6 +145,8 @@ onMounted(load)
       </el-table>
 
       <el-pagination
+        role="navigation"
+        aria-label="我的举报分页"
         class="pager"
         layout="prev, pager, next, total"
         :current-page="page"

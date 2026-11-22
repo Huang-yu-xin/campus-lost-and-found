@@ -2,6 +2,8 @@
 import { ref, watch } from 'vue'
 import { listClues, type Clue } from '@/api/clues'
 import { describeError } from '@/api/feedback'
+import { restoreFocus } from '@/utils/restoreFocus'
+import ResultSummary from '@/components/ResultSummary.vue'
 import { formatTime } from '@/utils/time'
 const received = ref(false)
 const page = ref(1)
@@ -14,6 +16,7 @@ async function load() {
   const current = ++request
   loading.value = true
   error.value = ''
+  const previous = document.activeElement
   try {
     const result = await listClues(received.value, page.value)
     if (current === request) {
@@ -24,6 +27,7 @@ async function load() {
     if (current === request) error.value = describeError(e)
   } finally {
     if (current === request) loading.value = false
+    if (current === request) await restoreFocus(previous)
   }
 }
 watch(
@@ -45,8 +49,15 @@ watch(
       </el-radio-group>
       <el-button :loading="loading" @click="load">刷新</el-button>
     </div>
+    <ResultSummary
+      name="线索记录"
+      :loading="loading"
+      :failed="!!error"
+      :total="total"
+      :page="page"
+    />
     <el-alert v-if="error" :title="error" type="error" :closable="false" />
-    <el-skeleton v-if="loading" :rows="4" animated />
+    <el-skeleton v-if="loading" :rows="4" animated aria-hidden="true" />
     <el-empty v-else-if="!rows.length" description="暂无线索记录" />
     <template v-else>
       <div class="mobile-records" aria-label="线索记录">
@@ -67,13 +78,20 @@ watch(
           >
         </article>
       </div>
-      <el-table class="desktop-records" :data="rows">
+      <el-table
+        table-layout="auto"
+        :scrollbar-tabindex="0"
+        role="region"
+        aria-label="线索记录"
+        class="desktop-records"
+        :data="rows"
+      >
         <el-table-column prop="lostItemId" label="寻物编号" />
         <el-table-column
           :prop="received ? 'provider.nickname' : 'publisher.nickname'"
           :label="received ? '提供者' : '发布人'"
         />
-        <el-table-column prop="content" label="线索内容" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="content" label="线索内容" min-width="200" />
         <el-table-column label="操作"
           ><template #default="{ row }"
             ><RouterLink :to="{ name: 'clue-detail', params: { clueId: row.id } }"
@@ -84,6 +102,8 @@ watch(
       </el-table>
     </template>
     <el-pagination
+      role="navigation"
+      aria-label="线索记录分页"
       v-if="total > 0"
       v-model:current-page="page"
       :page-size="10"

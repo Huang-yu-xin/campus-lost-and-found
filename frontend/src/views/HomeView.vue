@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { nextTick, onMounted, ref } from 'vue'
 
 import { getCsrf } from '@/api/auth'
 import { describeError } from '@/api/feedback'
 import { useAuthStore } from '@/stores/auth'
+import { restoreFocus } from '@/utils/restoreFocus'
 
 // 基础框架阶段的首页：检查前端 → 代理 → 后端这条链路。物品列表做好后由负责人替换本页内容
 
@@ -14,6 +15,7 @@ const backendState = ref<CheckState>('checking')
 const backendMessage = ref('')
 
 async function checkBackend() {
+  const retry = document.activeElement?.id === 'check-backend'
   backendState.value = 'checking'
   try {
     await getCsrf()
@@ -22,6 +24,11 @@ async function checkBackend() {
   } catch (error) {
     backendState.value = 'failed'
     backendMessage.value = describeError(error)
+  } finally {
+    if (retry) {
+      await nextTick()
+      await restoreFocus(document.getElementById('check-backend'))
+    }
   }
 }
 
@@ -36,19 +43,21 @@ onMounted(checkBackend)
     <el-card shadow="never" class="status-card">
       <template #header>常用功能</template>
       <div class="entries">
-        <el-button type="primary" @click="$router.push({ name: 'items' })">浏览物品</el-button>
+        <RouterLink :to="{ name: 'items' }" class="el-button el-button--primary"
+          >浏览物品</RouterLink
+        >
         <template v-if="!auth.isAdmin">
-          <el-button @click="$router.push({ name: 'item-publish' })">发布信息</el-button>
-          <el-button v-if="auth.isLoggedIn" @click="$router.push({ name: 'my-items' })"
-            >我的发布</el-button
+          <RouterLink :to="{ name: 'item-publish' }" class="el-button">发布信息</RouterLink>
+          <RouterLink v-if="auth.isLoggedIn" :to="{ name: 'my-items' }" class="el-button"
+            >我的发布</RouterLink
           >
-          <el-button v-if="auth.isLoggedIn" @click="$router.push({ name: 'claim-received' })"
-            >我收到的认领</el-button
+          <RouterLink v-if="auth.isLoggedIn" :to="{ name: 'claim-received' }" class="el-button"
+            >我收到的认领</RouterLink
           >
         </template>
         <template v-else>
-          <el-button @click="$router.push({ name: 'admin-items' })">信息审核</el-button>
-          <el-button @click="$router.push({ name: 'admin-reports' })">举报处理</el-button>
+          <RouterLink :to="{ name: 'admin-items' }" class="el-button">信息审核</RouterLink>
+          <RouterLink :to="{ name: 'admin-reports' }" class="el-button">举报处理</RouterLink>
         </template>
       </div>
       <p v-if="!auth.isLoggedIn" class="login-state">登录后可以发布信息和管理本人记录。</p>
@@ -56,6 +65,9 @@ onMounted(checkBackend)
 
     <el-card shadow="never" class="status-card">
       <template #header>系统连通性</template>
+      <p class="visually-hidden" role="status">
+        {{ backendState === 'checking' ? '正在检查后端连接' : backendMessage }}
+      </p>
       <el-result
         v-if="backendState !== 'checking'"
         :icon="backendState === 'ok' ? 'success' : 'error'"
@@ -63,7 +75,7 @@ onMounted(checkBackend)
         :sub-title="backendMessage"
       >
         <template #extra>
-          <el-button @click="checkBackend">重新检查</el-button>
+          <el-button id="check-backend" @click="checkBackend">重新检查</el-button>
         </template>
       </el-result>
       <p v-else class="checking">正在检查后端连接…</p>

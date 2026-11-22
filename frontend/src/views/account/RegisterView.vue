@@ -5,6 +5,9 @@ import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 
 import { register, sendRegistrationCode } from '@/api/auth'
 import { describeError } from '@/api/feedback'
+import AccessibleFormItem from '@/components/AccessibleFormItem.vue'
+import PasswordInput from '@/components/PasswordInput.vue'
+import { validateForm } from '@/utils/validateForm'
 import { textLength } from '@/utils/text'
 
 // FR-01 注册：学号、姓名、校园卡号须与虚拟名册一致；邮箱验证码为模拟发送。注册成功不自动登录
@@ -111,7 +114,7 @@ async function sendCode() {
 }
 
 async function submit() {
-  if (submitting.value || !(await formRef.value?.validate().catch(() => false))) {
+  if (submitting.value || !(await validateForm(formRef.value))) {
     return
   }
   submitting.value = true
@@ -164,47 +167,71 @@ onBeforeUnmount(() => clearInterval(timer))
         label-position="top"
         @submit.prevent="submit"
       >
-        <el-form-item label="学号" prop="studentId">
-          <el-input v-model="form.studentId" maxlength="32" inputmode="numeric" />
-        </el-form-item>
-        <el-form-item label="姓名" prop="realName">
-          <el-input v-model="form.realName" maxlength="10" />
-        </el-form-item>
-        <el-form-item label="校园卡号" prop="campusCardNo">
-          <el-input v-model="form.campusCardNo" maxlength="32" />
-        </el-form-item>
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="form.email" maxlength="254" autocomplete="email" />
-        </el-form-item>
-        <el-form-item label="验证码" prop="emailCode">
+        <AccessibleFormItem label="学号" prop="studentId" v-slot="{ control }">
+          <el-input
+            v-bind="control"
+            aria-required="true"
+            v-model="form.studentId"
+            maxlength="32"
+            inputmode="numeric"
+          />
+        </AccessibleFormItem>
+        <AccessibleFormItem label="姓名" prop="realName" v-slot="{ control }">
+          <el-input v-bind="control" aria-required="true" v-model="form.realName" maxlength="10" />
+        </AccessibleFormItem>
+        <AccessibleFormItem label="校园卡号" prop="campusCardNo" v-slot="{ control }">
+          <el-input
+            v-bind="control"
+            aria-required="true"
+            v-model="form.campusCardNo"
+            maxlength="32"
+          />
+        </AccessibleFormItem>
+        <AccessibleFormItem label="邮箱" prop="email" v-slot="{ control }">
+          <el-input
+            v-bind="control"
+            aria-required="true"
+            v-model="form.email"
+            maxlength="254"
+            autocomplete="email"
+          />
+        </AccessibleFormItem>
+        <AccessibleFormItem label="验证码" prop="emailCode" v-slot="{ control }">
           <div class="code-row">
-            <el-input v-model="form.emailCode" maxlength="6" inputmode="numeric" />
+            <el-input
+              v-bind="control"
+              aria-required="true"
+              v-model="form.emailCode"
+              maxlength="6"
+              inputmode="numeric"
+            />
             <el-button :loading="sending" :disabled="countdown > 0" @click="sendCode">
               {{ countdown > 0 ? `${countdown} 秒后重发` : '获取验证码' }}
             </el-button>
           </div>
-        </el-form-item>
-        <el-form-item label="密码" prop="password">
-          <el-input
+        </AccessibleFormItem>
+        <AccessibleFormItem label="密码" prop="password" v-slot="{ control }">
+          <PasswordInput
+            v-bind="control"
+            aria-required="true"
             v-model="form.password"
-            type="password"
-            show-password
             maxlength="64"
             autocomplete="new-password"
           />
-        </el-form-item>
-        <el-form-item label="确认密码" prop="confirmPassword">
-          <el-input
+        </AccessibleFormItem>
+        <AccessibleFormItem label="确认密码" prop="confirmPassword" v-slot="{ control }">
+          <PasswordInput
+            v-bind="control"
+            aria-required="true"
+            toggle-label="显示确认密码"
             v-model="form.confirmPassword"
-            type="password"
-            show-password
             maxlength="64"
             autocomplete="new-password"
           />
-        </el-form-item>
-        <el-form-item label="昵称（选填，公开显示）" prop="nickname">
-          <el-input v-model="form.nickname" placeholder="不填则自动生成" />
-        </el-form-item>
+        </AccessibleFormItem>
+        <AccessibleFormItem label="昵称（选填，公开显示）" prop="nickname" v-slot="{ control }">
+          <el-input v-bind="control" v-model="form.nickname" placeholder="不填则自动生成" />
+        </AccessibleFormItem>
         <el-button type="primary" native-type="submit" :loading="submitting" class="submit">
           注册
         </el-button>

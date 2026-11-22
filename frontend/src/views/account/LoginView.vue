@@ -4,6 +4,9 @@ import { useRoute, useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
 
 import { describeError } from '@/api/feedback'
+import AccessibleFormItem from '@/components/AccessibleFormItem.vue'
+import PasswordInput from '@/components/PasswordInput.vue'
+import { validateForm } from '@/utils/validateForm'
 import { useAuthStore } from '@/stores/auth'
 import { safeRedirect } from '@/utils/redirect'
 
@@ -28,7 +31,7 @@ const rules: FormRules<typeof form> = {
 }
 
 async function submit() {
-  if (submitting.value || !(await formRef.value?.validate().catch(() => false))) {
+  if (submitting.value || !(await validateForm(formRef.value))) {
     return
   }
   submitting.value = true
@@ -64,23 +67,25 @@ async function submit() {
         label-position="top"
         @submit.prevent="submit"
       >
-        <el-form-item label="账号" prop="account">
+        <AccessibleFormItem label="账号" prop="account" v-slot="{ control }">
           <el-input
+            v-bind="control"
+            aria-required="true"
             v-model="form.account"
             placeholder="学号 / 校园卡号"
             autocomplete="username"
             maxlength="32"
           />
-        </el-form-item>
-        <el-form-item label="密码" prop="password">
-          <el-input
+        </AccessibleFormItem>
+        <AccessibleFormItem label="密码" prop="password" v-slot="{ control }">
+          <PasswordInput
+            v-bind="control"
+            aria-required="true"
             v-model="form.password"
-            type="password"
-            show-password
             autocomplete="current-password"
             maxlength="64"
           />
-        </el-form-item>
+        </AccessibleFormItem>
         <el-button type="primary" native-type="submit" :loading="submitting" class="submit">
           登录
         </el-button>

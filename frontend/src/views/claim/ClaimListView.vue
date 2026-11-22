@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import type { Claim } from '@/api/claim'
 
 import { describeError } from '@/api/feedback'
+import ResultSummary from '@/components/ResultSummary.vue'
 import { http } from '@/api/http'
 import { formatTime } from '@/utils/time'
 
@@ -68,18 +69,25 @@ watch(
     <el-select
       v-model="filter"
       placeholder="全部状态"
-      clearable
       aria-label="认领状态"
       style="width: min(180px, 100%); margin-bottom: 16px"
     >
+      <el-option value="" label="全部状态" />
       <el-option v-for="(text, value) in statusText" :key="value" :value="value" :label="text" />
     </el-select>
 
+    <ResultSummary
+      name="认领记录"
+      :loading="loading"
+      :failed="!!errorText"
+      :total="total"
+      :page="page"
+    />
     <el-alert v-if="errorText" :title="errorText" type="warning" :closable="false" show-icon>
       <p class="hint">请确认登录状态后重新加载。</p>
     </el-alert>
 
-    <el-skeleton v-else-if="loading" :rows="5" animated />
+    <el-skeleton v-else-if="loading" :rows="5" animated aria-hidden="true" />
 
     <el-empty v-else-if="rows.length === 0" description="暂无符合条件的认领申请" />
 
@@ -101,19 +109,23 @@ watch(
           <RouterLink :to="`/claims/${row.id}`" class="record-link">查看 / 处理</RouterLink>
         </article>
       </div>
-      <el-table class="desktop-records" :data="rows" border style="width: 100%">
+      <el-table
+        table-layout="auto"
+        :scrollbar-tabindex="0"
+        role="region"
+        aria-label="认领记录"
+        class="desktop-records"
+        :data="rows"
+        border
+        style="width: 100%"
+      >
         <el-table-column prop="itemId" label="物品编号" min-width="120" />
         <el-table-column
           :prop="mine ? 'publisher.nickname' : 'applicant.nickname'"
           :label="mine ? '发布人' : '申请人'"
           width="120"
         />
-        <el-table-column
-          prop="description"
-          label="特征说明"
-          min-width="180"
-          show-overflow-tooltip
-        />
+        <el-table-column prop="description" label="特征说明" min-width="180" />
         <el-table-column label="状态" width="110">
           <template #default="{ row }">
             <el-tag :type="tagType(row.status)">{{ statusText[row.status] ?? row.status }}</el-tag>
@@ -132,6 +144,8 @@ watch(
       </el-table>
     </template>
     <el-pagination
+      role="navigation"
+      aria-label="认领记录分页"
       v-if="total > 0"
       v-model:current-page="page"
       :page-size="10"
